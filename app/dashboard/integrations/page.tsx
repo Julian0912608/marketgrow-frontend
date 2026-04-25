@@ -31,9 +31,11 @@ interface AdvIntegration {
   color:    string;
 }
 
+// UPDATE: meta_ads toegevoegd
 const ADV_PLATFORMS: Record<string, { name: string; color: string }> = {
   bolcom_ads:  { name: 'Bol.com Ads',  color: 'bg-blue-500/10 border-blue-500/20 text-blue-400' },
   google_ads:  { name: 'Google Ads',   color: 'bg-amber-500/10 border-amber-500/20 text-amber-400' },
+  meta_ads:    { name: 'Meta Ads',     color: 'bg-blue-500/10 border-blue-500/20 text-blue-400' },
 };
 
 function StatusBadge({ status, errorMessage }: { status: string; errorMessage?: string }) {
@@ -71,6 +73,7 @@ export default function IntegrationsPage() {
   const [advForm,         setAdvForm]         = useState({ clientId: '', clientSecret: '' });
   const [advLoading,      setAdvLoading]      = useState(false);
   const [advSyncing,      setAdvSyncing]      = useState<string | null>(null);
+  const [metaConnecting,  setMetaConnecting]  = useState(false);
 
   const load = async () => {
     try {
@@ -90,7 +93,20 @@ export default function IntegrationsPage() {
     } catch {}
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+
+    // Toon banner als we van een OAuth callback komen
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('connected') === 'meta_ads') {
+      setError('');
+      // Strip query parameters voor schone URL
+      window.history.replaceState({}, '', '/dashboard/integrations');
+    } else if (params.get('error')) {
+      setError(decodeURIComponent(params.get('error') || ''));
+      window.history.replaceState({}, '', '/dashboard/integrations');
+    }
+  }, []);
 
   const handleShopifyInstall = async () => {
     const domain = prompt('Enter your Shopify store domain (e.g. mystore.myshopify.com)');
@@ -154,12 +170,33 @@ export default function IntegrationsPage() {
     }
   };
 
-  const handleAdvSync = async (platform: string) => {
+  // ── Meta Ads OAuth start ──────────────────────────────────
+  const handleMetaConnect = async () => {
+    setMetaConnecting(true);
+    setError('');
+    try {
+      const res = await api.post('/integrations/advertising/meta/connect');
+      if (res.data?.authUrl) {
+        // Redirect naar Facebook
+        window.location.href = res.data.authUrl;
+      } else {
+        setError('Geen auth URL ontvangen — controleer META_APP_ID env var');
+        setMetaConnecting(false);
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error ?? 'Meta Ads verbinding starten mislukt');
+      setMetaConnecting(false);
+    }
+  };
+
+  const handleAdvSync = async (platform: string, integrationId?: string) => {
     setAdvSyncing(platform);
     try {
-      if (platform === 'bolcom_ads') {
-        const res = await api.post('/integrations/advertising/bolcom/sync');
+      if (platform === 'bolcom_ads' && integrationId) {
+        const res = await api.post(`/integrations/advertising/bolcom/${integrationId}/sync`);
         alert(`Sync complete: ${res.data.campaigns} campaigns, €${res.data.totalSpend?.toFixed(2)} spend`);
+      } else if (platform === 'meta_ads') {
+        alert('Meta Ads sync wordt geactiveerd in een volgende update.');
       }
     } catch (err: any) {
       setError(err.response?.data?.error ?? 'Sync failed');
@@ -187,6 +224,9 @@ export default function IntegrationsPage() {
   const storeConnections = connections.filter(
     (c: any) => !ADV_PLATFORMS[c.platformSlug ?? c.platform]
   );
+
+  const isMetaConnected = advIntegrations.some(a => a.platform === 'meta_ads');
+  const isBolcomAdsConnected = advIntegrations.some(a => a.platform === 'bolcom_ads');
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -337,11 +377,15 @@ export default function IntegrationsPage() {
                 </div>
               </div>
               <h3 className="font-display font-700 text-white mb-1">{adv.name}</h3>
-              <p className="text-xs text-slate-500 mb-3">Campaign performance, spend and ROAS</p>
+              <p className="text-xs text-slate-500 mb-3">
+                {adv.platform === 'meta_ads'
+                  ? 'Facebook + Instagram campaign automation'
+                  : 'Campaign performance, spend and ROAS'}
+              </p>
               <div className="flex gap-2">
-                {adv.platform === 'bolcom_ads' && (
+                {(adv.platform === 'bolcom_ads' || adv.platform === 'meta_ads') && (
                   <button
-                    onClick={() => handleAdvSync(adv.platform)}
+                    onClick={() => handleAdvSync(adv.platform, adv.id)}
                     disabled={advSyncing === adv.platform}
                     className="flex-1 flex items-center justify-center gap-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white text-xs font-medium py-2 rounded-lg transition-colors disabled:opacity-50"
                   >
@@ -361,7 +405,7 @@ export default function IntegrationsPage() {
           ))}
 
           {/* Bol.com Ads connect form (alleen als nog niet connected) */}
-          {!advIntegrations.some(a => a.platform === 'bolcom_ads') && (
+          {!isBolcomAdsConnected && (
             <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-10 h-10 rounded-xl border bg-blue-500/10 border-blue-500/20 flex items-center justify-center">
@@ -423,9 +467,33 @@ export default function IntegrationsPage() {
             </div>
           )}
 
-          {/* Coming soon advertising platforms */}
+          {/* Meta Ads connect tile (alleen als nog niet connected) */}
+          {!isMetaConnected && (
+            <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-10 h-10 rounded-xl border bg-blue-500/10 border-blue-500/20 flex items-center justify-center">
+                  <Megaphone className="w-4 h-4 text-blue-400" />
+                </div>
+              </div>
+              <h3 className="font-display font-700 text-white mb-1">Meta Ads</h3>
+              <p className="text-xs text-slate-500 mb-3">Facebook + Instagram campaign automation</p>
+
+              <button
+                onClick={handleMetaConnect}
+                disabled={metaConnecting}
+                className="w-full flex items-center justify-center gap-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white text-xs font-medium py-2 rounded-lg transition-colors disabled:opacity-60"
+              >
+                {metaConnecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                {metaConnecting ? 'Redirecting...' : 'Connect with Facebook'}
+              </button>
+              <p className="text-xs text-slate-500 pt-2">
+                You will be redirected to Facebook to grant access to your Business Manager.
+              </p>
+            </div>
+          )}
+
+          {/* Coming soon */}
           {[
-            { id: 'meta_ads',    name: 'Meta Ads',    color: 'bg-blue-500/10 border-blue-500/20 text-blue-400' },
             { id: 'tiktok_ads',  name: 'TikTok Ads',  color: 'bg-slate-700/50 border-slate-600/50 text-slate-400' },
           ].map(p => (
             <div key={p.id} className="bg-slate-800/30 border border-slate-700/30 rounded-2xl p-5 opacity-50">
