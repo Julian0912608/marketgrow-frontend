@@ -2,28 +2,33 @@
 
 // app/dashboard/meta-studio/page.tsx
 //
-// Meta Ad Creative Studio (PR 3a — draft only)
+// Meta Ad Creative Studio (PR 3a.2 — herziene flow)
 //
-// Functionaliteit:
-//   - Klant typt prompt + selecteert eventueel product
-//   - Kiest format (single image / carousel / video / story)
-//   - AI genereert primary text, headline, description, CTA + (optioneel) image
-//   - Preview toont hoe de ad eruit ziet op Facebook/Instagram
-//   - Drafts lijst met edit/regenerate/archive acties
+// Nieuwe flow:
+//   1. (optioneel) Selecteer een product uit Shopify catalogus
+//   2. Beschrijf wat je wilt adverteren (prompt)
+//   3. Kies format (single/carousel/video/story)
+//   4. Kies image bron:
+//      - AI generated (Gemini)
+//      - Product foto (uit Shopify)
+//      - Upload eigen foto
+//      - Geen image (alleen copy)
+//   5. Genereer
 //
-// PR 3b voegt de "Publish to Meta" knop toe — voor nu blijft alles
-// als 'draft' in de DB staan.
+// Drafts blijven onderaan zichtbaar met edit/regenerate/archive.
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Sparkles, Loader2, Image as ImageIcon, Video,
   BookOpen, Layers, Wand2, RefreshCw, Edit2, Trash2,
   CheckCircle, AlertCircle, Send, ChevronDown,
+  Package, Upload, X, Search, ShoppingBag,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 
 // ── Types ──────────────────────────────────────────────────────
 type MetaFormat = 'single_image' | 'carousel' | 'video' | 'story';
+type ImageMode  = 'ai_generated' | 'product_image' | 'uploaded' | 'none';
 type MetaCTA    =
   | 'SHOP_NOW' | 'LEARN_MORE' | 'SIGN_UP' | 'GET_OFFER'
   | 'BOOK_TRAVEL' | 'CONTACT_US' | 'DOWNLOAD' | 'DONATE_NOW'
@@ -31,11 +36,12 @@ type MetaCTA    =
   | 'GET_DIRECTIONS';
 
 interface Product {
-  id:        string;
-  title:     string;
-  platform:  string;
-  price_min: number | null;
-  image_url: string | null;
+  id:            string;
+  title:         string;
+  platform:      string;
+  price_min:     number | null;
+  image_url:     string | null;
+  units_sold:    number;
 }
 
 interface Creative {
@@ -50,6 +56,7 @@ interface Creative {
   source:           string;
   generationPrompt: string | null;
   imageAspectRatio: string | null;
+  imageSource:      string | null;
   productTitle:     string | null;
   createdAt:        string;
   updatedAt:        string;
@@ -63,11 +70,11 @@ const FORMATS: { id: MetaFormat; label: string; desc: string; icon: any }[] = [
 ];
 
 const TONES = [
-  { id: 'lifestyle',   label: 'Lifestyle',   desc: 'Aspiratie & warmte' },
-  { id: 'urgent',      label: 'Urgent',      desc: 'Schaarste / deadline' },
-  { id: 'educational', label: 'Educatief',   desc: 'Probleem oplossen' },
-  { id: 'promotional', label: 'Promotie',    desc: 'Korting & deal' },
-  { id: 'storytelling', label: 'Verhaal',    desc: 'Emotioneel verhaal' },
+  { id: 'lifestyle',    label: 'Lifestyle',   desc: 'Aspiratie & warmte' },
+  { id: 'urgent',       label: 'Urgent',      desc: 'Schaarste / deadline' },
+  { id: 'educational',  label: 'Educatief',   desc: 'Probleem oplossen' },
+  { id: 'promotional',  label: 'Promotie',    desc: 'Korting & deal' },
+  { id: 'storytelling', label: 'Verhaal',     desc: 'Emotioneel verhaal' },
 ];
 
 const CTA_LABELS: Record<MetaCTA, string> = {
@@ -86,11 +93,11 @@ const CTA_LABELS: Record<MetaCTA, string> = {
   GET_DIRECTIONS:  'Get directions',
 };
 
-// ── Ad Preview Component ───────────────────────────────────────
-function AdPreview({ creative, compact = false }: { creative: Creative | null; compact?: boolean }) {
+// ── Ad Preview ──────────────────────────────────────────────────
+function AdPreview({ creative }: { creative: Creative | null }) {
   if (!creative) {
     return (
-      <div className={`bg-slate-800/30 border border-slate-700/50 border-dashed rounded-2xl ${compact ? 'p-6' : 'p-12'} text-center`}>
+      <div className="bg-slate-800/30 border border-slate-700/50 border-dashed rounded-2xl p-12 text-center">
         <ImageIcon className="w-8 h-8 text-slate-600 mx-auto mb-3" />
         <p className="text-slate-500 text-sm">Preview verschijnt hier na generatie</p>
       </div>
@@ -104,7 +111,6 @@ function AdPreview({ creative, compact = false }: { creative: Creative | null; c
 
   return (
     <div className="bg-white rounded-2xl overflow-hidden shadow-2xl">
-      {/* Mock Facebook header */}
       <div className="px-4 py-3 flex items-center gap-3 border-b border-slate-100">
         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
           M
@@ -115,14 +121,12 @@ function AdPreview({ creative, compact = false }: { creative: Creative | null; c
         </div>
       </div>
 
-      {/* Primary text */}
       {creative.primaryText && (
         <div className="px-4 py-3 text-[14px] text-slate-900 whitespace-pre-wrap">
           {creative.primaryText}
         </div>
       )}
 
-      {/* Image */}
       {image ? (
         <div className={`${aspect} bg-slate-100 overflow-hidden`}>
           <img src={image} alt="Ad creative" className="w-full h-full object-cover" />
@@ -133,7 +137,6 @@ function AdPreview({ creative, compact = false }: { creative: Creative | null; c
         </div>
       )}
 
-      {/* Headline + description + CTA bar */}
       <div className="px-4 py-3 bg-slate-50 flex items-center justify-between border-t border-slate-100">
         <div className="flex-1 min-w-0">
           <p className="text-[10px] uppercase tracking-wider text-slate-500 truncate">jouwbedrijf.nl</p>
@@ -145,6 +148,91 @@ function AdPreview({ creative, compact = false }: { creative: Creative | null; c
         <button className="ml-3 px-3 py-1.5 bg-slate-200 text-slate-900 text-[12px] font-semibold rounded-md whitespace-nowrap">
           {CTA_LABELS[creative.callToAction as MetaCTA] || creative.callToAction}
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Product Picker Modal ───────────────────────────────────────
+function ProductPickerModal({ products, onSelect, onClose }: {
+  products: Product[];
+  onSelect: (p: Product) => void;
+  onClose: () => void;
+}) {
+  const [search, setSearch] = useState('');
+  const filtered = products.filter(p =>
+    p.title.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="p-5 border-b border-slate-800">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-white text-lg font-bold">Kies een product</h2>
+            <button onClick={onClose} className="text-slate-400 hover:text-white">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Zoek op product naam..."
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              autoFocus
+            />
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-3">
+          {filtered.length === 0 ? (
+            <div className="p-8 text-center">
+              <Package className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+              <p className="text-slate-400 text-sm">
+                {products.length === 0 ? 'Geen producten in catalogus' : 'Geen producten gevonden'}
+              </p>
+              {products.length === 0 && (
+                <p className="text-slate-500 text-xs mt-1">
+                  Koppel je Shopify of Bol.com winkel via Integraties
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {filtered.map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => { onSelect(p); onClose(); }}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800 transition-colors text-left"
+                >
+                  <div className="w-12 h-12 rounded-lg bg-slate-800 flex-shrink-0 overflow-hidden">
+                    {p.image_url ? (
+                      <img src={p.image_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <ShoppingBag className="w-5 h-5 text-slate-600" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-white truncate">{p.title}</p>
+                    <p className="text-xs text-slate-500">
+                      {p.platform} · €{(p.price_min ?? 0).toFixed(2)}
+                      {p.units_sold > 0 && ` · ${p.units_sold} verkocht`}
+                    </p>
+                  </div>
+                  {p.image_url && (
+                    <span className="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 flex-shrink-0">
+                      Met foto
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -254,11 +342,19 @@ export default function MetaStudioPage() {
   const [format,         setFormat]         = useState<MetaFormat>('single_image');
   const [tone,           setTone]           = useState('lifestyle');
   const [language,       setLanguage]       = useState<'nl' | 'en'>('nl');
-  const [generateImage,  setGenerateImage]  = useState(true);
-  const [products,       setProducts]       = useState<Product[]>([]);
-  const [productId,      setProductId]      = useState<string>('');
   const [brandContext,   setBrandContext]   = useState('');
   const [showAdvanced,   setShowAdvanced]   = useState(false);
+
+  // Product state
+  const [products,           setProducts]           = useState<Product[]>([]);
+  const [selectedProduct,    setSelectedProduct]    = useState<Product | null>(null);
+  const [showProductPicker,  setShowProductPicker]  = useState(false);
+
+  // Image mode state
+  const [imageMode,          setImageMode]          = useState<ImageMode>('ai_generated');
+  const [uploadedImage,      setUploadedImage]      = useState<string>('');
+  const [uploadedFileName,   setUploadedFileName]   = useState<string>('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Generation state
   const [generating,     setGenerating]     = useState(false);
@@ -274,11 +370,11 @@ export default function MetaStudioPage() {
   // Meta connection check
   const [hasMetaAccount, setHasMetaAccount] = useState<boolean | null>(null);
 
-  // ── Load functies ───────────────────────────────────────
+  // Load functies
   const loadProducts = useCallback(async () => {
     try {
       const res = await api.get('/ai/products');
-      setProducts(res.data.products?.slice(0, 30) ?? []);
+      setProducts(res.data.products?.slice(0, 50) ?? []);
     } catch {}
   }, []);
 
@@ -296,11 +392,8 @@ export default function MetaStudioPage() {
       const res = await api.get('/ai/meta-creative/ad-accounts');
       setHasMetaAccount((res.data.adAccounts?.length ?? 0) > 0);
     } catch (err: any) {
-      if (err.response?.status === 403) {
-        setHasMetaAccount(false);
-      } else {
-        setHasMetaAccount(null);
-      }
+      if (err.response?.status === 403) setHasMetaAccount(false);
+      else setHasMetaAccount(null);
     }
   }, []);
 
@@ -310,12 +403,51 @@ export default function MetaStudioPage() {
     loadDrafts();
   }, [checkMetaAccount, loadProducts, loadDrafts]);
 
-  // ── Generate ───────────────────────────────────────────
+  // Image upload handler
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Bestand te groot. Maximaal 5MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const dataUrl = ev.target?.result as string;
+      setUploadedImage(dataUrl);
+      setUploadedFileName(file.name);
+      setImageMode('uploaded');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Wanneer product wordt geselecteerd: zet automatisch image mode op product_image als foto beschikbaar
+  const selectProduct = (p: Product) => {
+    setSelectedProduct(p);
+    if (p.image_url && imageMode === 'ai_generated') {
+      setImageMode('product_image');
+    } else if (!p.image_url && imageMode === 'product_image') {
+      setImageMode('ai_generated');
+    }
+  };
+
+  // Generate
   const generate = async () => {
     if (!prompt.trim()) {
       setError('Schrijf eerst een korte beschrijving van wat je wilt adverteren.');
       return;
     }
+    if (imageMode === 'product_image' && !selectedProduct?.image_url) {
+      setError('Geen productfoto beschikbaar. Kies een ander product of een andere image-modus.');
+      return;
+    }
+    if (imageMode === 'uploaded' && !uploadedImage) {
+      setError('Geen foto geüpload.');
+      return;
+    }
+
     setGenerating(true);
     setError('');
     setCurrentResult(null);
@@ -324,10 +456,11 @@ export default function MetaStudioPage() {
       const res = await api.post('/ai/meta-creative/generate', {
         format,
         prompt:        prompt.trim(),
-        productId:     productId || undefined,
+        productId:     selectedProduct?.id,
         language,
         tone,
-        generateImage: generateImage && format !== 'video',
+        imageMode:     format === 'video' ? 'none' : imageMode,
+        uploadedImage: imageMode === 'uploaded' ? uploadedImage : undefined,
         brandContext:  brandContext.trim() || undefined,
       });
 
@@ -344,12 +477,12 @@ export default function MetaStudioPage() {
         source:           'ai_generated',
         generationPrompt: prompt.trim(),
         imageAspectRatio: format === 'story' ? '9:16' : format === 'single_image' ? '1:1' : null,
-        productTitle:     productId ? (products.find(p => p.id === productId)?.title ?? null) : null,
+        imageSource:      c.imageSource,
+        productTitle:     selectedProduct?.title ?? null,
         createdAt:        new Date().toISOString(),
         updatedAt:        new Date().toISOString(),
       });
 
-      // Refresh drafts list zodat de nieuwe ook in onderaan komt
       loadDrafts();
     } catch (err: any) {
       const errMsg = err.response?.data?.error ?? err.response?.data?.message ?? 'Generatie mislukt.';
@@ -362,7 +495,6 @@ export default function MetaStudioPage() {
     setRegeneratingId(creativeId);
     try {
       const res = await api.post(`/ai/meta-creative/${creativeId}/regenerate-image`);
-      // Update lokaal
       setDrafts(d => d.map(x => x.id === creativeId
         ? { ...x, assetUrls: [res.data.imageUrl], imageAspectRatio: res.data.aspectRatio }
         : x
@@ -385,7 +517,6 @@ export default function MetaStudioPage() {
 
     await api.patch(`/ai/meta-creative/${creativeId}`, apiPayload);
 
-    // Update lokaal
     setDrafts(d => d.map(x => x.id === creativeId ? { ...x, ...updates } : x));
     if (currentResult?.id === creativeId) {
       setCurrentResult(c => c ? { ...c, ...updates } : c);
@@ -401,7 +532,7 @@ export default function MetaStudioPage() {
     } catch {}
   };
 
-  // ── No Meta account state ──────────────────────────────
+  // No Meta account state
   if (hasMetaAccount === false) {
     return (
       <div className="p-6 max-w-3xl mx-auto">
@@ -434,7 +565,8 @@ export default function MetaStudioPage() {
     );
   }
 
-  // ── Hoofdview ─────────────────────────────────────────
+  const productsWithImage = products.filter(p => p.image_url).length;
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
 
@@ -455,28 +587,75 @@ export default function MetaStudioPage() {
         {/* Linker kolom: Form */}
         <div className="space-y-4">
 
-          {/* Prompt */}
+          {/* 1. Product picker (eerst) */}
           <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5">
             <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 block">
-              1. Wat wil je adverteren?
+              1. Product (optioneel)
+            </label>
+
+            {selectedProduct ? (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-900 border border-slate-700">
+                <div className="w-12 h-12 rounded-lg bg-slate-800 flex-shrink-0 overflow-hidden">
+                  {selectedProduct.image_url ? (
+                    <img src={selectedProduct.image_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <ShoppingBag className="w-5 h-5 text-slate-600" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white truncate">{selectedProduct.title}</p>
+                  <p className="text-xs text-slate-500">
+                    {selectedProduct.platform} · €{(selectedProduct.price_min ?? 0).toFixed(2)}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedProduct(null)}
+                  className="text-slate-400 hover:text-white p-1"
+                  title="Verwijder selectie"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowProductPicker(true)}
+                className="w-full flex items-center justify-center gap-2 p-3 rounded-lg bg-slate-900 border border-slate-700 border-dashed text-slate-400 hover:text-white hover:border-slate-600 transition-colors"
+              >
+                <Package className="w-4 h-4" />
+                <span className="text-sm">
+                  {products.length > 0
+                    ? `Kies uit ${products.length} producten (${productsWithImage} met foto)`
+                    : 'Geen producten gevonden — koppel een winkel'}
+                </span>
+              </button>
+            )}
+          </div>
+
+          {/* 2. Prompt */}
+          <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5">
+            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 block">
+              2. Wat wil je adverteren?
             </label>
             <textarea
               value={prompt}
               onChange={e => setPrompt(e.target.value)}
-              placeholder="Bijvoorbeeld: 'Een ad voor onze nieuwe wintercollectie sjaals, focus op duurzaamheid en handgemaakt in Nederland'"
+              placeholder={selectedProduct
+                ? `Bijv: 'Maak een ad voor ${selectedProduct.title.slice(0, 40)}, focus op kwaliteit en duurzaamheid'`
+                : `Bijv: 'Een ad voor onze nieuwe wintercollectie sjaals, focus op handgemaakt in Nederland'`
+              }
               rows={4}
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
               maxLength={1000}
             />
-            <div className="flex justify-between items-center mt-2">
-              <p className="text-xs text-slate-500">{prompt.length} / 1000</p>
-            </div>
+            <p className="text-xs text-slate-500 mt-1">{prompt.length} / 1000</p>
           </div>
 
-          {/* Format */}
+          {/* 3. Format */}
           <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5">
             <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 block">
-              2. Format
+              3. Format
             </label>
             <div className="grid grid-cols-2 gap-2">
               {FORMATS.map(f => (
@@ -497,10 +676,109 @@ export default function MetaStudioPage() {
             </div>
           </div>
 
-          {/* Tone & language */}
+          {/* 4. Image source */}
+          {format !== 'video' && (
+            <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5">
+              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 block">
+                4. Afbeelding
+              </label>
+
+              <div className="space-y-2">
+                {/* AI Generated */}
+                <button
+                  onClick={() => setImageMode('ai_generated')}
+                  className={`w-full p-3 rounded-lg text-left transition-all border ${
+                    imageMode === 'ai_generated'
+                      ? 'bg-brand-600/20 border-brand-500/50 text-white'
+                      : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white hover:border-slate-600'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" />
+                    <p className="text-sm font-semibold flex-1">AI genereert nieuwe afbeelding</p>
+                    <span className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-300">3 credits</span>
+                  </div>
+                  <p className="text-xs opacity-70 mt-1 ml-6">Gemini maakt een passende ad foto</p>
+                </button>
+
+                {/* Product image */}
+                <button
+                  onClick={() => selectedProduct?.image_url && setImageMode('product_image')}
+                  disabled={!selectedProduct?.image_url}
+                  className={`w-full p-3 rounded-lg text-left transition-all border ${
+                    imageMode === 'product_image'
+                      ? 'bg-brand-600/20 border-brand-500/50 text-white'
+                      : !selectedProduct?.image_url
+                      ? 'bg-slate-900/50 border-slate-800 text-slate-600 cursor-not-allowed'
+                      : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white hover:border-slate-600'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <ShoppingBag className="w-4 h-4" />
+                    <p className="text-sm font-semibold flex-1">Productfoto gebruiken</p>
+                    <span className="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">1 credit</span>
+                  </div>
+                  <p className="text-xs opacity-70 mt-1 ml-6">
+                    {selectedProduct?.image_url
+                      ? 'De foto van het geselecteerde product'
+                      : selectedProduct
+                      ? 'Dit product heeft geen foto in catalogus'
+                      : 'Selecteer eerst een product'}
+                  </p>
+                </button>
+
+                {/* Upload */}
+                <div>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`w-full p-3 rounded-lg text-left transition-all border ${
+                      imageMode === 'uploaded'
+                        ? 'bg-brand-600/20 border-brand-500/50 text-white'
+                        : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white hover:border-slate-600'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Upload className="w-4 h-4" />
+                      <p className="text-sm font-semibold flex-1">
+                        {uploadedImage ? `Geüpload: ${uploadedFileName}` : 'Eigen foto uploaden'}
+                      </p>
+                      <span className="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">1 credit</span>
+                    </div>
+                    <p className="text-xs opacity-70 mt-1 ml-6">JPG, PNG of WebP (max 5MB)</p>
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                </div>
+
+                {/* No image */}
+                <button
+                  onClick={() => setImageMode('none')}
+                  className={`w-full p-3 rounded-lg text-left transition-all border ${
+                    imageMode === 'none'
+                      ? 'bg-brand-600/20 border-brand-500/50 text-white'
+                      : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white hover:border-slate-600'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <X className="w-4 h-4" />
+                    <p className="text-sm font-semibold flex-1">Alleen copy, geen afbeelding</p>
+                    <span className="text-xs px-2 py-0.5 rounded bg-slate-700 text-slate-400">1 credit</span>
+                  </div>
+                  <p className="text-xs opacity-70 mt-1 ml-6">Genereer alleen tekst, voeg later zelf een afbeelding toe</p>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* 5. Tone & language */}
           <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5 space-y-4">
             <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
-              3. Stijl
+              5. Stijl
             </label>
 
             <div>
@@ -539,20 +817,6 @@ export default function MetaStudioPage() {
                 ))}
               </div>
             </div>
-
-            {format !== 'video' && (
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-slate-500">AI image genereren</p>
-                <button
-                  onClick={() => setGenerateImage(!generateImage)}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                    generateImage ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-slate-400'
-                  }`}
-                >
-                  {generateImage ? 'Aan' : 'Uit'}
-                </button>
-              </div>
-            )}
           </div>
 
           {/* Advanced */}
@@ -565,33 +829,16 @@ export default function MetaStudioPage() {
           </button>
 
           {showAdvanced && (
-            <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5 space-y-3">
-              <div>
-                <label className="text-xs text-slate-400 mb-1 block">Koppel aan product (optioneel)</label>
-                <select
-                  value={productId}
-                  onChange={e => setProductId(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white"
-                >
-                  <option value="">— Geen product gekoppeld —</option>
-                  {products.map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.title.slice(0, 60)} ({p.platform})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs text-slate-400 mb-1 block">Extra brand context (optioneel, max 500)</label>
-                <textarea
-                  value={brandContext}
-                  onChange={e => setBrandContext(e.target.value.slice(0, 500))}
-                  rows={2}
-                  placeholder="Bijv: 'We zijn een duurzaam Nederlands merk, sinds 2018, premium positionering'"
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500"
-                />
-              </div>
+            <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5">
+              <label className="text-xs text-slate-400 mb-1 block">Extra brand context (optioneel, max 500)</label>
+              <textarea
+                value={brandContext}
+                onChange={e => setBrandContext(e.target.value.slice(0, 500))}
+                rows={3}
+                placeholder="Bijv: 'We zijn een duurzaam Nederlands merk, sinds 2018, premium positionering, lokaal geproduceerd in een sociale werkplaats'"
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500"
+              />
+              <p className="text-xs text-slate-500 mt-1">{brandContext.length} / 500</p>
             </div>
           )}
 
@@ -608,8 +855,8 @@ export default function MetaStudioPage() {
           {error && (
             <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm px-4 py-3 rounded-xl flex items-center gap-2">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span>{error}</span>
-              <button onClick={() => setError('')} className="ml-auto text-rose-400 hover:text-white">×</button>
+              <span className="flex-1">{error}</span>
+              <button onClick={() => setError('')} className="text-rose-400 hover:text-white">×</button>
             </div>
           )}
         </div>
@@ -629,7 +876,7 @@ export default function MetaStudioPage() {
                 className="flex-1 flex items-center justify-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium py-2 rounded-lg transition-colors disabled:opacity-50"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${regeneratingId === currentResult.id ? 'animate-spin' : ''}`} />
-                Nieuwe image
+                Nieuwe AI image
               </button>
               <button
                 onClick={() => setEditing(currentResult)}
@@ -680,6 +927,11 @@ export default function MetaStudioPage() {
                   <div className="absolute top-2 left-2 px-2 py-0.5 bg-slate-900/80 backdrop-blur text-xs text-white rounded">
                     {FORMATS.find(f => f.id === d.format)?.label ?? d.format}
                   </div>
+                  {d.imageSource && d.imageSource !== 'ai_generated' && (
+                    <div className="absolute top-2 right-2 px-2 py-0.5 bg-emerald-500/80 backdrop-blur text-xs text-white rounded">
+                      {d.imageSource === 'product_image' ? 'Product' : d.imageSource === 'uploaded' ? 'Upload' : 'No img'}
+                    </div>
+                  )}
                 </div>
                 <div className="p-3">
                   <p className="text-xs font-semibold text-white line-clamp-2 leading-tight mb-1">
@@ -700,7 +952,7 @@ export default function MetaStudioPage() {
                       onClick={() => regenerateImage(d.id)}
                       disabled={regeneratingId === d.id}
                       className="flex-1 px-2 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white text-xs rounded-md transition-colors disabled:opacity-50"
-                      title="Nieuwe image"
+                      title="Nieuwe AI image"
                     >
                       <RefreshCw className={`w-3 h-3 mx-auto ${regeneratingId === d.id ? 'animate-spin' : ''}`} />
                     </button>
@@ -719,7 +971,14 @@ export default function MetaStudioPage() {
         )}
       </div>
 
-      {/* Edit modal */}
+      {/* Modals */}
+      {showProductPicker && (
+        <ProductPickerModal
+          products={products}
+          onSelect={selectProduct}
+          onClose={() => setShowProductPicker(false)}
+        />
+      )}
       {editing && (
         <EditModal
           creative={editing}
