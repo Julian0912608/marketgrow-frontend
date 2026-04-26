@@ -4,18 +4,8 @@
 //
 // Meta Ad Creative Studio (PR 3a.2 — herziene flow)
 //
-// Nieuwe flow:
-//   1. (optioneel) Selecteer een product uit Shopify catalogus
-//   2. Beschrijf wat je wilt adverteren (prompt)
-//   3. Kies format (single/carousel/video/story)
-//   4. Kies image bron:
-//      - AI generated (Gemini)
-//      - Product foto (uit Shopify)
-//      - Upload eigen foto
-//      - Geen image (alleen copy)
-//   5. Genereer
-//
-// Drafts blijven onderaan zichtbaar met edit/regenerate/archive.
+// FIX: price_min komt uit DB als string (Postgres numeric type)
+// dus parseFloat(String(...)) gebruiken voor toFixed() calls.
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
@@ -39,9 +29,9 @@ interface Product {
   id:            string;
   title:         string;
   platform:      string;
-  price_min:     number | null;
+  price_min:     number | string | null;  // FIX: kan string zijn vanuit Postgres numeric
   image_url:     string | null;
-  units_sold:    number;
+  units_sold:    number | string;          // FIX: ook deze kan string zijn (COALESCE SUM)
 }
 
 interface Creative {
@@ -60,6 +50,14 @@ interface Creative {
   productTitle:     string | null;
   createdAt:        string;
   updatedAt:        string;
+}
+
+// ── Helper: veilig getal parsen uit DB string/number ──────────
+function safeNumber(v: unknown): number {
+  if (v === null || v === undefined) return 0;
+  if (typeof v === 'number') return v;
+  const parsed = parseFloat(String(v));
+  return isNaN(parsed) ? 0 : parsed;
 }
 
 const FORMATS: { id: MetaFormat; label: string; desc: string; icon: any }[] = [
@@ -201,35 +199,38 @@ function ProductPickerModal({ products, onSelect, onClose }: {
             </div>
           ) : (
             <div className="space-y-1">
-              {filtered.map(p => (
-                <button
-                  key={p.id}
-                  onClick={() => { onSelect(p); onClose(); }}
-                  className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800 transition-colors text-left"
-                >
-                  <div className="w-12 h-12 rounded-lg bg-slate-800 flex-shrink-0 overflow-hidden">
-                    {p.image_url ? (
-                      <img src={p.image_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <ShoppingBag className="w-5 h-5 text-slate-600" />
-                      </div>
+              {filtered.map(p => {
+                const unitsSold = safeNumber(p.units_sold);
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => { onSelect(p); onClose(); }}
+                    className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800 transition-colors text-left"
+                  >
+                    <div className="w-12 h-12 rounded-lg bg-slate-800 flex-shrink-0 overflow-hidden">
+                      {p.image_url ? (
+                        <img src={p.image_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <ShoppingBag className="w-5 h-5 text-slate-600" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{p.title}</p>
+                      <p className="text-xs text-slate-500">
+                        {p.platform} · €{safeNumber(p.price_min).toFixed(2)}
+                        {unitsSold > 0 && ` · ${unitsSold} verkocht`}
+                      </p>
+                    </div>
+                    {p.image_url && (
+                      <span className="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 flex-shrink-0">
+                        Met foto
+                      </span>
                     )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{p.title}</p>
-                    <p className="text-xs text-slate-500">
-                      {p.platform} · €{(p.price_min ?? 0).toFixed(2)}
-                      {p.units_sold > 0 && ` · ${p.units_sold} verkocht`}
-                    </p>
-                  </div>
-                  {p.image_url && (
-                    <span className="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 flex-shrink-0">
-                      Met foto
-                    </span>
-                  )}
-                </button>
-              ))}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
@@ -607,7 +608,7 @@ export default function MetaStudioPage() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-white truncate">{selectedProduct.title}</p>
                   <p className="text-xs text-slate-500">
-                    {selectedProduct.platform} · €{(selectedProduct.price_min ?? 0).toFixed(2)}
+                    {selectedProduct.platform} · €{safeNumber(selectedProduct.price_min).toFixed(2)}
                   </p>
                 </div>
                 <button
