@@ -1,5 +1,11 @@
 'use client';
 
+// app/dashboard/integrations/page.tsx
+//
+// PR 2 UPDATE:
+//   - handleAdvSync werkt nu voor zowel bolcom_ads als meta_ads
+//   - Roept platform-specifieke sync endpoints aan met integration_id
+
 import { useState, useEffect } from 'react';
 import {
   RefreshCw, Trash2, Plus, CheckCircle, AlertCircle,
@@ -23,7 +29,6 @@ const FIELD_LABELS: Record<string, string> = {
   storeUrl:  'Store URL (https://...)',
 };
 
-// Advertising platforms — kunnen meerdere zijn
 interface AdvIntegration {
   id:       string;
   platform: string;
@@ -31,7 +36,6 @@ interface AdvIntegration {
   color:    string;
 }
 
-// UPDATE: meta_ads toegevoegd
 const ADV_PLATFORMS: Record<string, { name: string; color: string }> = {
   bolcom_ads:  { name: 'Bol.com Ads',  color: 'bg-blue-500/10 border-blue-500/20 text-blue-400' },
   google_ads:  { name: 'Google Ads',   color: 'bg-amber-500/10 border-amber-500/20 text-amber-400' },
@@ -66,6 +70,7 @@ export default function IntegrationsPage() {
   const [loading,       setLoading]       = useState(false);
   const [syncing,       setSyncing]       = useState<string | null>(null);
   const [error,         setError]         = useState('');
+  const [syncSuccess,   setSyncSuccess]   = useState('');
 
   // Advertising state
   const [advIntegrations, setAdvIntegrations] = useState<AdvIntegration[]>([]);
@@ -81,7 +86,6 @@ export default function IntegrationsPage() {
       const data = res.data.connections ?? res.data ?? [];
       setConnections(data);
 
-      // Haal alle advertising koppelingen op
       const advs: AdvIntegration[] = data
         .filter((c: any) => ADV_PLATFORMS[c.platformSlug ?? c.platform])
         .map((c: any) => {
@@ -100,7 +104,6 @@ export default function IntegrationsPage() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('connected') === 'meta_ads') {
       setError('');
-      // Strip query parameters voor schone URL
       window.history.replaceState({}, '', '/dashboard/integrations');
     } else if (params.get('error')) {
       setError(decodeURIComponent(params.get('error') || ''));
@@ -177,7 +180,6 @@ export default function IntegrationsPage() {
     try {
       const res = await api.post('/integrations/advertising/meta/connect');
       if (res.data?.authUrl) {
-        // Redirect naar Facebook
         window.location.href = res.data.authUrl;
       } else {
         setError('Geen auth URL ontvangen — controleer META_APP_ID env var');
@@ -189,15 +191,39 @@ export default function IntegrationsPage() {
     }
   };
 
-  const handleAdvSync = async (platform: string, integrationId?: string) => {
+  // ── Advertising sync (zowel bolcom_ads als meta_ads) ─────
+  const handleAdvSync = async (platform: string, integrationId: string) => {
     setAdvSyncing(platform);
+    setSyncSuccess('');
+    setError('');
+
     try {
-      if (platform === 'bolcom_ads' && integrationId) {
-        const res = await api.post(`/integrations/advertising/bolcom/${integrationId}/sync`);
-        alert(`Sync complete: ${res.data.campaigns} campaigns, €${res.data.totalSpend?.toFixed(2)} spend`);
+      let url: string;
+      if (platform === 'bolcom_ads') {
+        url = `/integrations/advertising/bolcom/${integrationId}/sync`;
       } else if (platform === 'meta_ads') {
-        alert('Meta Ads sync wordt geactiveerd in een volgende update.');
+        url = `/integrations/advertising/meta/${integrationId}/sync`;
+      } else {
+        setError(`Sync niet ondersteund voor ${platform}`);
+        setAdvSyncing(null);
+        return;
       }
+
+      const res = await api.post(url);
+      const data = res.data;
+      const platformLabel = ADV_PLATFORMS[platform]?.name ?? platform;
+
+      if (platform === 'meta_ads') {
+        setSyncSuccess(
+          `${platformLabel}: ${data.campaigns ?? 0} campaigns, ${data.adsets ?? 0} adsets, ${data.ads ?? 0} ads (€${(data.totalSpend ?? 0).toFixed(2)} spend laatste 30 dagen)`
+        );
+      } else {
+        setSyncSuccess(
+          `${platformLabel}: ${data.campaigns ?? 0} campagnes, €${(data.totalSpend ?? 0).toFixed(2)} spend`
+        );
+      }
+
+      await load();
     } catch (err: any) {
       setError(err.response?.data?.error ?? 'Sync failed');
     } finally {
@@ -239,6 +265,13 @@ export default function IntegrationsPage() {
         <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm px-4 py-3 rounded-xl mb-6 flex items-center justify-between">
           <span>{error}</span>
           <button onClick={() => setError('')} className="ml-2 underline text-xs">Close</button>
+        </div>
+      )}
+
+      {syncSuccess && (
+        <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm px-4 py-3 rounded-xl mb-6 flex items-center justify-between">
+          <span>{syncSuccess}</span>
+          <button onClick={() => setSyncSuccess('')} className="ml-2 underline text-xs">Close</button>
         </div>
       )}
 
