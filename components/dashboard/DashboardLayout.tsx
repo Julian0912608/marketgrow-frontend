@@ -5,6 +5,8 @@
 // FIX: Nav items zijn nu gated op plan.
 // Locked items tonen een slot-icoon en openen de upgrade modal.
 // Globale content generatie indicator: toont spinner als AI bezig is.
+//
+// PR 3a: Meta Studio nav item toegevoegd (gated op 'ad-analytics' = Growth+)
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -12,7 +14,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, TrendingUp, ShoppingBag, Megaphone,
   Plug, Settings, LogOut, Zap, Bell, Menu, Sparkles,
-  Instagram, Store, Lock, Users,
+  Instagram, Store, Lock, Users, Wand2,
 } from 'lucide-react';
 import { useAuthStore } from '@/lib/store';
 import { usePermissions } from '@/lib/usePermissions';
@@ -39,6 +41,7 @@ const navItems = [
   { label: 'Advertising',    href: '/dashboard/ads',            feature: 'ad-analytics',         icon: Megaphone },
   { label: 'AI Insights',    href: '/dashboard/ai-insights',    feature: 'ai-recommendations',   icon: Sparkles },
   { label: 'Social Content', href: '/dashboard/social-content', feature: 'ai-recommendations',   icon: Instagram },
+  { label: 'Meta Studio',    href: '/dashboard/meta-studio',    feature: 'ad-analytics',         icon: Wand2 },
   { label: 'Team',           href: '/dashboard/team',           feature: 'team-accounts',        icon: Users },
   { label: 'Integrations',   href: '/dashboard/integrations',   feature: null,                   icon: Plug },
   { label: 'Settings',       href: '/settings',                 feature: null,                   icon: Settings },
