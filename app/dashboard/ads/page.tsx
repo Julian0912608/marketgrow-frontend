@@ -1,13 +1,16 @@
 'use client';
 
 // app/dashboard/ads/page.tsx
-// Herbouwd: per-platform blokken, Google Ads zichtbaar, overzichtelijk bij meerdere kanalen
-// FIX: period filter triggert nu correct een nieuwe API call bij elke klik
+//
+// PR 2 UPDATE:
+//   - handleSync werkt nu voor zowel bolcom_ads als meta_ads
+//   - Haalt integration_id op via /api/integrations om de correcte
+//     :integrationId/sync URL te kunnen aanroepen
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  Megaphone, TrendingUp, MousePointer, Eye,
-  RefreshCw, AlertCircle, ArrowUpRight, ArrowDownRight,
+  Megaphone, TrendingUp, MousePointer,
+  RefreshCw, ArrowUpRight, ArrowDownRight,
   Zap, BarChart3, Loader2,
 } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -43,10 +46,10 @@ interface PlatformGroup {
 
 // ── Config ─────────────────────────────────────────────────────
 const PLATFORM_CONFIG: Record<string, { label: string; color: string; accent: string }> = {
-  bolcom_ads:  { label: 'Bol.com Ads',  color: 'bg-blue-500/15 border-blue-500/30',   accent: 'text-blue-400' },
-  google_ads:  { label: 'Google Ads',   color: 'bg-rose-500/15 border-rose-500/30',    accent: 'text-rose-400' },
+  bolcom_ads:  { label: 'Bol.com Ads',  color: 'bg-blue-500/15 border-blue-500/30',     accent: 'text-blue-400' },
+  google_ads:  { label: 'Google Ads',   color: 'bg-rose-500/15 border-rose-500/30',     accent: 'text-rose-400' },
   meta_ads:    { label: 'Meta Ads',     color: 'bg-indigo-500/15 border-indigo-500/30', accent: 'text-indigo-400' },
-  tiktok_ads:  { label: 'TikTok Ads',   color: 'bg-slate-700/50 border-slate-600',     accent: 'text-slate-300' },
+  tiktok_ads:  { label: 'TikTok Ads',   color: 'bg-slate-700/50 border-slate-600',      accent: 'text-slate-300' },
 };
 
 function formatEur(val: number) {
@@ -202,10 +205,7 @@ export default function AdsPage() {
   const [syncError,   setSyncError]   = useState('');
   const [syncSuccess, setSyncSuccess] = useState('');
 
-  // FIX: useCallback voorkomt stale closure — load gebruikt altijd
-  // de meegegeven parameters, niet de state waarden van het moment
-  // van aanmaken. Dit was de oorzaak van de period-filter bug.
-  const load = useCallback(async (p: string, from: string = '', to: string = '') => {
+  const load = async (p = period, from = customFrom, to = customTo) => {
     setLoading(true);
     try {
       const params = p === 'custom' && from && to
@@ -219,12 +219,11 @@ export default function AdsPage() {
       setNoData(true);
     }
     setLoading(false);
-  }, []);
+  };
 
-  // FIX: period als dependency zodat effect opnieuw draait bij wijziging
   useEffect(() => {
     if (period !== 'custom') load(period);
-  }, [period, load]);
+  }, [period]);
 
   const handlePeriod = (p: string) => {
     setPeriod(p);
@@ -236,16 +235,43 @@ export default function AdsPage() {
     if (customFrom && customTo) load('custom', customFrom, customTo);
   };
 
+  // ── Sync trigger met integration_id lookup ──────────────────
   const handleSync = async (platform: string) => {
     setSyncing(platform);
     setSyncError('');
     setSyncSuccess('');
+
     try {
-      if (platform === 'bolcom_ads') {
-        const res = await api.post('/integrations/advertising/bolcom/sync');
-        setSyncSuccess(`Sync geslaagd: ${res.data.campaigns ?? 0} campagnes bijgewerkt`);
-        await load(period, customFrom, customTo);
+      // Stap 1: zoek integration_id op voor dit platform
+      const integrationsRes = await api.get('/integrations');
+      const integrations = integrationsRes.data ?? [];
+      const integration = integrations.find(
+        (i: any) => (i.platformSlug ?? i.platform) === platform && i.status === 'active'
+      );
+
+      if (!integration) {
+        setSyncError(`${PLATFORM_CONFIG[platform]?.label ?? platform} integratie niet gevonden`);
+        setSyncing(null);
+        return;
       }
+
+      // Stap 2: roep platform-specifieke sync URL aan
+      let url: string;
+      if (platform === 'bolcom_ads') {
+        url = `/integrations/advertising/bolcom/${integration.id}/sync`;
+      } else if (platform === 'meta_ads') {
+        url = `/integrations/advertising/meta/${integration.id}/sync`;
+      } else {
+        setSyncError(`Sync niet ondersteund voor ${platform}`);
+        setSyncing(null);
+        return;
+      }
+
+      const res = await api.post(url);
+      const campaigns = res.data.campaigns ?? 0;
+      const platformLabel = PLATFORM_CONFIG[platform]?.label ?? platform;
+      setSyncSuccess(`${platformLabel}: ${campaigns} campagnes bijgewerkt`);
+      await load();
     } catch (e: any) {
       setSyncError(e.response?.data?.error ?? 'Sync mislukt');
     }
@@ -285,6 +311,10 @@ export default function AdsPage() {
   const grandRevenue = platformGroups.reduce((s, g) => s + g.totalRevenue, 0);
   const grandRoas    = grandSpend > 0 ? grandRevenue / grandSpend : 0;
   const grandClicks  = platformGroups.reduce((s, g) => s + g.totalClicks, 0);
+
+  // Helper: welke platforms ondersteunen sync
+  const supportsSync = (platform: string): boolean =>
+    platform === 'bolcom_ads' || platform === 'meta_ads';
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -366,7 +396,7 @@ export default function AdsPage() {
           <Megaphone className="w-10 h-10 text-slate-600 mx-auto mb-4" />
           <h2 className="text-white font-semibold mb-2">Geen advertentiedata</h2>
           <p className="text-slate-400 text-sm max-w-sm mx-auto">
-            Koppel een advertentieplatform (Bol.com Ads of Google Ads) via de Integraties pagina om data te zien.
+            Koppel een advertentieplatform (Bol.com Ads, Meta Ads of Google Ads) via de Integraties pagina om data te zien.
           </p>
         </div>
       ) : (
@@ -397,7 +427,7 @@ export default function AdsPage() {
               <PlatformBlock
                 key={group.platform}
                 group={group}
-                onSync={group.platform === 'bolcom_ads' ? () => handleSync(group.platform) : undefined}
+                onSync={supportsSync(group.platform) ? () => handleSync(group.platform) : undefined}
                 syncing={syncing === group.platform}
               />
             ))}
