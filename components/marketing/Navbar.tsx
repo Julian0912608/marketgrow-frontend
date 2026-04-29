@@ -1,91 +1,114 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import { Menu, X, Zap } from 'lucide-react';
 
-const navLinks = [
-  { label: 'Features',  href: '/#features' },
-  { label: 'Pricing',   href: '/#pricing' },
-  { label: 'Blog',      href: '/blog' },
-  { label: 'Resources', href: '/resources' },
-];
-
 export function Navbar() {
+  const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [open, setOpen]         = useState(false);
 
   useEffect(() => {
-    const handler = () => setScrolled(window.scrollY > 24);
-    window.addEventListener('scroll', handler);
-    return () => window.removeEventListener('scroll', handler);
+    const onScroll = () => setScrolled(window.scrollY > 16);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  return (
-    <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
-      scrolled ? 'bg-white/90 backdrop-blur-md border-b border-slate-100 shadow-sm' : 'bg-transparent'
-    }`}>
-      <nav className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+  const links = [
+    { label: 'How it works', href: '#how' },
+    { label: 'Features',     href: '#features' },
+    { label: 'Pricing',      href: '#pricing' },
+    { label: 'FAQ',          href: '#faq' },
+  ];
 
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 font-display font-700 text-xl text-slate-900">
-          <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center">
-            <Zap className="w-4 h-4 text-white" fill="white" />
+  return (
+    <header
+      className={`fixed top-0 inset-x-0 z-50 transition-all ${
+        scrolled
+          ? 'bg-cream/85 backdrop-blur-md border-b border-warm-100'
+          : 'bg-transparent'
+      }`}
+    >
+      <nav className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+
+        <Link href="/" className="flex items-center gap-2.5 group">
+          <div className="w-8 h-8 rounded-xl bg-warm-900 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+            <Zap className="w-4 h-4 text-terra-400" fill="currentColor" />
           </div>
-          MarketGrow
+          <span className="font-serif-display font-600 text-warm-900 text-xl tracking-tight">
+            MarketGrow
+          </span>
         </Link>
 
-        {/* Desktop links */}
-        <ul className="hidden md:flex items-center gap-8">
-          {navLinks.map(l => (
-            <li key={l.href}>
-              <a href={l.href} className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
-                {l.label}
-              </a>
-            </li>
-          ))}
-        </ul>
-
-        {/* CTA buttons */}
-        <div className="hidden md:flex items-center gap-3">
-          <Link href="/login" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
-            Sign in
-          </Link>
-          <Link href="/register" className="text-sm font-semibold bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg transition-colors">
-            Start free trial →
-          </Link>
-        </div>
-
-        {/* Mobile menu toggle */}
-        <button
-          className="md:hidden p-2 text-slate-600"
-          onClick={() => setOpen(!open)}
-          aria-label="Toggle menu"
-        >
-          {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
-      </nav>
-
-      {/* Mobile menu */}
-      {open && (
-        <div className="md:hidden bg-white border-b border-slate-100 px-6 py-4 space-y-3">
-          {navLinks.map(l => (
+        {/* Desktop nav */}
+        <div className="hidden md:flex items-center gap-8">
+          {links.map(l => (
             <a
               key={l.href}
               href={l.href}
-              className="block text-sm font-medium text-slate-600 py-2"
-              onClick={() => setOpen(false)}
+              className="text-sm font-medium text-warm-700 hover:text-warm-900 transition-colors"
             >
               {l.label}
             </a>
           ))}
-          <div className="pt-3 border-t border-slate-100 space-y-2">
-            <Link href="/login" className="block text-sm font-medium text-center py-2.5 text-slate-600">
-              Sign in
-            </Link>
-            <Link href="/register" className="block text-sm font-semibold text-center py-2.5 bg-brand-600 text-white rounded-lg">
-              Start free trial →
-            </Link>
+        </div>
+
+        {/* Desktop CTAs */}
+        <div className="hidden md:flex items-center gap-3">
+          <Link
+            href="/login"
+            className="text-sm font-medium text-warm-700 hover:text-warm-900 transition-colors"
+          >
+            Sign in
+          </Link>
+          <Link
+            href="/register"
+            className="bg-warm-900 hover:bg-warm-700 text-white text-sm font-medium px-4 py-2 rounded-full transition-colors shadow-sm"
+          >
+            Start free trial
+          </Link>
+        </div>
+
+        {/* Mobile menu trigger */}
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="md:hidden p-2 -mr-2 text-warm-900"
+          aria-label="Toggle menu"
+        >
+          {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </button>
+      </nav>
+
+      {/* Mobile menu */}
+      {isOpen && (
+        <div className="md:hidden bg-cream border-t border-warm-100">
+          <div className="px-6 py-4 space-y-3">
+            {links.map(l => (
+              <a
+                key={l.href}
+                href={l.href}
+                onClick={() => setIsOpen(false)}
+                className="block text-sm font-medium text-warm-700 py-2"
+              >
+                {l.label}
+              </a>
+            ))}
+            <div className="pt-3 border-t border-warm-100 flex flex-col gap-3">
+              <Link
+                href="/login"
+                onClick={() => setIsOpen(false)}
+                className="text-sm font-medium text-warm-700"
+              >
+                Sign in
+              </Link>
+              <Link
+                href="/register"
+                onClick={() => setIsOpen(false)}
+                className="bg-warm-900 text-white text-sm font-medium px-4 py-2.5 rounded-full text-center"
+              >
+                Start free trial
+              </Link>
+            </div>
           </div>
         </div>
       )}
