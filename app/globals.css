@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;0,9..144,900;1,9..144,400;1,9..144,500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,8 +6,27 @@
 
 :root {
   --font-geist-sans: 'DM Sans', system-ui, sans-serif;
-  --font-cabinet: 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-cabinet:    'Fraunces', Georgia, serif;
+  --font-display:    'Fraunces', Georgia, serif;
   --font-geist-mono: 'Fira Code', monospace;
+
+  /* Warm cream background palette */
+  --cream-50:  #fdfaf6;
+  --cream-100: #f9f3eb;
+  --cream-200: #f1e8db;
+
+  /* Terra accent (warm complement to indigo brand) */
+  --terra-400: #e89779;
+  --terra-500: #d97757;
+  --terra-600: #c25e3e;
+
+  /* Warm slate */
+  --warm-slate-900: #1c1917;
+  --warm-slate-800: #292524;
+  --warm-slate-700: #3f3833;
+  --warm-slate-500: #78716c;
+  --warm-slate-400: #a8a29e;
+  --warm-slate-300: #d6d3d1;
 }
 
 @layer base {
@@ -26,21 +45,53 @@
   }
 
   ::selection {
-    background: #bae6fd;
-    color: #0c4a6e;
+    background: #fde2d4;
+    color: #c25e3e;
   }
 }
 
 @layer utilities {
   .text-balance { text-wrap: balance; }
 
+  .font-display { font-family: var(--font-display); }
+  .font-serif-display { font-family: var(--font-display); font-feature-settings: 'ss01', 'ss02'; }
+
   .animate-delay-100 { animation-delay: 100ms; }
   .animate-delay-200 { animation-delay: 200ms; }
   .animate-delay-300 { animation-delay: 300ms; }
   .animate-delay-400 { animation-delay: 400ms; }
   .animate-delay-500 { animation-delay: 500ms; }
+  .animate-delay-700 { animation-delay: 700ms; }
 
   .opacity-0-init { opacity: 0; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-fade-up {
+    animation: fadeUp 0.8s ease-out forwards;
+    opacity: 0;
+  }
+
+  /* Warm cream backgrounds */
+  .bg-cream     { background: var(--cream-50);  }
+  .bg-cream-100 { background: var(--cream-100); }
+  .bg-cream-200 { background: var(--cream-200); }
+
+  .text-terra-500 { color: var(--terra-500); }
+  .text-terra-600 { color: var(--terra-600); }
+  .bg-terra-500   { background: var(--terra-500); }
+  .bg-terra-50    { background: #fdf2ec; }
+  .border-terra-200 { border-color: #f4ddd0; }
+
+  .text-warm-900 { color: var(--warm-slate-900); }
+  .text-warm-700 { color: var(--warm-slate-700); }
+  .text-warm-500 { color: var(--warm-slate-500); }
+  .text-warm-400 { color: var(--warm-slate-400); }
+  .border-warm-200 { border-color: #e7e5e4; }
+  .border-warm-100 { border-color: #f3f1ef; }
 
   /* Subtle grain texture overlay */
   .grain::after {
@@ -51,5 +102,13 @@
     z-index: 9999;
     opacity: 0.025;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  }
+
+  /* Warm gradient meshes for hero */
+  .mesh-warm {
+    background-image:
+      radial-gradient(at 20% 30%, rgba(232, 151, 121, 0.15) 0px, transparent 50%),
+      radial-gradient(at 80% 70%, rgba(79, 70, 229, 0.12) 0px, transparent 50%),
+      radial-gradient(at 60% 20%, rgba(253, 226, 212, 0.4) 0px, transparent 50%);
   }
 }
