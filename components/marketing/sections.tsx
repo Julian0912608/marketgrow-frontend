@@ -4,63 +4,62 @@ import Link from 'next/link';
 import { useState } from 'react';
 import {
   ArrowRight, Check, Sparkles, Zap, ImageIcon,
-  Layers, Wand2, ShoppingBag, Compass, MessageCircle,
-  TrendingUp, Lightbulb, Plus, Minus,
+  Layers, Wand2, MessageCircle,
+  Plus, Minus,
 } from 'lucide-react';
 
 // ════════════════════════════════════════════════════════════════
-// PAIN POINTS — what's wrong with the status quo
+// PAIN POINTS
 // ════════════════════════════════════════════════════════════════
 
 export function PainPoints() {
   const pains = [
     {
-      symbol: '✕',
+      emoji: '😰',
       title: 'Empty content calendars',
       desc: 'You know you need to post, but staring at a blank Instagram is exhausting. Days slip by with nothing live.',
     },
     {
-      symbol: '✕',
+      emoji: '🤷',
       title: 'No idea what actually works',
       desc: 'You see other stores running ads everywhere. You try it. Money disappears. No one tells you why.',
     },
     {
-      symbol: '✕',
+      emoji: '💸',
       title: 'Too expensive to outsource',
       desc: 'Agencies want €2,000+ per month. Freelancers ghost you. Tools cost more than your revenue.',
     },
   ];
 
   return (
-    <section className="bg-warm-900 py-24 sm:py-32">
-      <div className="max-w-5xl mx-auto px-6">
-        <div className="max-w-2xl mb-16">
-          <p className="text-xs uppercase tracking-[0.2em] text-terra-400 font-medium mb-4">
+    <section className="bg-white py-24">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="max-w-2xl mx-auto text-center mb-16">
+          <div className="inline-flex items-center gap-2 bg-rose-50 text-rose-700 text-xs font-semibold px-3 py-1.5 rounded-full mb-4">
             Sound familiar?
-          </p>
-          <h2 className="font-serif-display text-4xl sm:text-5xl text-white leading-tight tracking-tight">
-            You started a store to <span className="italic text-terra-400">build something</span>.
+          </div>
+          <h2 className="font-display text-4xl sm:text-5xl font-800 text-slate-900 leading-tight tracking-tight mb-4">
+            You started a store to <span className="text-brand-600">build something</span>.
             Not to drown in marketing tasks.
           </h2>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-px bg-warm-700">
+        <div className="grid md:grid-cols-3 gap-6">
           {pains.map((p, i) => (
             <div
               key={i}
-              className="bg-warm-900 p-8 sm:p-10"
+              className="bg-slate-50 rounded-2xl border border-slate-100 p-8"
             >
-              <div className="text-terra-500 text-2xl font-light mb-6">{p.symbol}</div>
-              <h3 className="font-serif-display text-xl text-white mb-3 leading-snug">
+              <div className="text-4xl mb-4">{p.emoji}</div>
+              <h3 className="font-display font-700 text-xl text-slate-900 mb-3">
                 {p.title}
               </h3>
-              <p className="text-warm-400 text-sm leading-relaxed">{p.desc}</p>
+              <p className="text-slate-600 text-sm leading-relaxed">{p.desc}</p>
             </div>
           ))}
         </div>
 
-        {/* Transition line */}
-        <p className="text-center mt-16 text-warm-400 text-base">
+        <p className="text-center mt-16 text-slate-500 text-base">
           We built MarketGrow to fix exactly this.
         </p>
       </div>
@@ -69,7 +68,7 @@ export function PainPoints() {
 }
 
 // ════════════════════════════════════════════════════════════════
-// HOW IT WORKS — 3 simple steps
+// HOW IT WORKS
 // ════════════════════════════════════════════════════════════════
 
 export function HowItWorks() {
@@ -95,14 +94,14 @@ export function HowItWorks() {
   ];
 
   return (
-    <section id="how" className="bg-cream py-24 sm:py-32">
-      <div className="max-w-5xl mx-auto px-6">
+    <section id="how" className="bg-slate-50 py-24">
+      <div className="max-w-7xl mx-auto px-6">
         <div className="max-w-2xl mx-auto text-center mb-20">
-          <p className="text-xs uppercase tracking-[0.2em] text-terra-600 font-medium mb-4">
+          <div className="inline-flex items-center gap-2 bg-brand-50 text-brand-700 text-xs font-semibold px-3 py-1.5 rounded-full mb-4">
             How it works
-          </p>
-          <h2 className="font-serif-display text-4xl sm:text-5xl text-warm-900 leading-tight tracking-tight">
-            From signup to <span className="italic">first growing</span> in three steps.
+          </div>
+          <h2 className="font-display text-4xl sm:text-5xl font-800 text-slate-900 leading-tight tracking-tight">
+            From signup to growing in <span className="text-brand-600">three steps</span>.
           </h2>
         </div>
 
@@ -116,15 +115,15 @@ export function HowItWorks() {
             >
               <div>
                 <div className="flex items-center gap-3 mb-5">
-                  <span className="font-serif-display italic text-terra-500 text-3xl">
+                  <span className="font-display text-brand-600 text-3xl font-700">
                     {step.number}
                   </span>
-                  <div className="h-px flex-1 bg-warm-200" />
+                  <div className="h-px flex-1 bg-slate-200" />
                 </div>
-                <h3 className="font-serif-display text-3xl sm:text-4xl text-warm-900 mb-4 leading-tight">
+                <h3 className="font-display text-3xl sm:text-4xl font-800 text-slate-900 mb-4 leading-tight">
                   {step.title}
                 </h3>
-                <p className="text-warm-700 text-base sm:text-lg leading-relaxed max-w-md">
+                <p className="text-slate-600 text-base sm:text-lg leading-relaxed max-w-md">
                   {step.desc}
                 </p>
               </div>
@@ -143,19 +142,19 @@ export function HowItWorks() {
 function StepVisual({ variant }: { variant: string }) {
   if (variant === 'connect') {
     return (
-      <div className="bg-white rounded-2xl border border-warm-100 shadow-lg p-8">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-lg p-8">
         <div className="space-y-3">
           {[
-            { name: 'Shopify',  status: 'Connected',  color: 'emerald' },
-            { name: 'Bol.com',  status: 'Connected',  color: 'emerald' },
-            { name: 'Meta Ads', status: 'Syncing…',   color: 'amber'   },
+            { name: 'Shopify',    status: 'Connected', color: 'emerald' },
+            { name: 'Bol.com',    status: 'Connected', color: 'emerald' },
+            { name: 'Meta Ads',   status: 'Syncing…',  color: 'amber'   },
           ].map((s, i) => (
-            <div key={i} className="flex items-center gap-3 p-3 bg-cream-50 rounded-lg">
-              <div className="w-9 h-9 rounded-lg bg-white border border-warm-100 flex items-center justify-center">
-                <Compass className="w-4 h-4 text-warm-700" />
+            <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+              <div className="w-9 h-9 rounded-lg bg-white border border-slate-200 flex items-center justify-center">
+                <Zap className="w-4 h-4 text-slate-700" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-warm-900">{s.name}</p>
+                <p className="text-sm font-semibold text-slate-900">{s.name}</p>
                 <p className={`text-xs ${
                   s.color === 'emerald' ? 'text-emerald-600' : 'text-amber-600'
                 }`}>{s.status}</p>
@@ -166,7 +165,7 @@ function StepVisual({ variant }: { variant: string }) {
             </div>
           ))}
         </div>
-        <p className="text-center text-xs text-warm-500 mt-4 pt-4 border-t border-warm-100">
+        <p className="text-center text-xs text-slate-500 mt-4 pt-4 border-t border-slate-100">
           🔒 Read-only access · Cancel anytime
         </p>
       </div>
@@ -175,32 +174,32 @@ function StepVisual({ variant }: { variant: string }) {
 
   if (variant === 'ai') {
     return (
-      <div className="bg-white rounded-2xl border border-warm-100 shadow-lg p-6 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-terra-500/10 rounded-full blur-3xl" />
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-lg p-6 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-brand-200/30 rounded-full blur-3xl" />
         <div className="relative">
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-7 h-7 rounded-lg bg-terra-50 flex items-center justify-center">
-              <Sparkles className="w-3.5 h-3.5 text-terra-600" />
+            <div className="w-7 h-7 rounded-lg bg-brand-50 flex items-center justify-center">
+              <Sparkles className="w-3.5 h-3.5 text-brand-600" />
             </div>
-            <span className="text-xs font-medium text-warm-700">AI is generating…</span>
+            <span className="text-xs font-semibold text-slate-700">AI is generating…</span>
           </div>
 
           <div className="space-y-2">
-            <div className="bg-cream-50 border border-warm-100 rounded-lg p-3">
-              <p className="text-xs text-warm-500 mb-1">Product description</p>
-              <p className="text-sm text-warm-900 leading-relaxed">
+            <div className="bg-slate-50 border border-slate-100 rounded-lg p-3">
+              <p className="text-xs text-slate-500 mb-1 font-medium">Product description</p>
+              <p className="text-sm text-slate-900 leading-relaxed">
                 Crafted from solid European oak by skilled hands in our Dutch workshop…
               </p>
             </div>
-            <div className="bg-cream-50 border border-warm-100 rounded-lg p-3">
-              <p className="text-xs text-warm-500 mb-1">Instagram caption</p>
-              <p className="text-sm text-warm-900 leading-relaxed">
+            <div className="bg-slate-50 border border-slate-100 rounded-lg p-3">
+              <p className="text-xs text-slate-500 mb-1 font-medium">Instagram caption</p>
+              <p className="text-sm text-slate-900 leading-relaxed">
                 A board that gets better with every dinner. ✨
               </p>
             </div>
-            <div className="bg-cream-50 border border-warm-100 rounded-lg p-3">
-              <p className="text-xs text-warm-500 mb-1">Ad headline</p>
-              <p className="text-sm text-warm-900 leading-relaxed">
+            <div className="bg-slate-50 border border-slate-100 rounded-lg p-3">
+              <p className="text-xs text-slate-500 mb-1 font-medium">Ad headline</p>
+              <p className="text-sm text-slate-900 leading-relaxed">
                 The serving board everyone asks about
               </p>
             </div>
@@ -212,29 +211,29 @@ function StepVisual({ variant }: { variant: string }) {
 
   // control
   return (
-    <div className="bg-white rounded-2xl border border-warm-100 shadow-lg p-6">
-      <div className="flex items-center gap-2 mb-4 pb-4 border-b border-warm-100">
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-lg p-6">
+      <div className="flex items-center gap-2 mb-4 pb-4 border-b border-slate-100">
         <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center">
           <Check className="w-3.5 h-3.5 text-emerald-600" />
         </div>
-        <span className="text-xs font-medium text-warm-700">Ready for review</span>
+        <span className="text-xs font-semibold text-slate-700">Ready for review</span>
       </div>
 
-      <div className="bg-cream-50 rounded-lg p-4 mb-4">
-        <p className="text-sm text-warm-900 leading-relaxed mb-2">
+      <div className="bg-slate-50 rounded-lg p-4 mb-4 border border-slate-100">
+        <p className="text-sm text-slate-900 leading-relaxed mb-2">
           The serving board everyone asks about. Made by hand, made to last generations.
         </p>
-        <p className="text-xs text-warm-500 italic">— Suggested ad copy</p>
+        <p className="text-xs text-slate-500">— Suggested ad copy</p>
       </div>
 
       <div className="grid grid-cols-3 gap-2">
-        <button className="px-3 py-2 bg-warm-900 text-white text-xs font-medium rounded-lg">
+        <button className="px-3 py-2 bg-brand-600 text-white text-xs font-semibold rounded-lg">
           Approve
         </button>
-        <button className="px-3 py-2 bg-cream-100 text-warm-700 text-xs font-medium rounded-lg border border-warm-100">
+        <button className="px-3 py-2 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200">
           Edit
         </button>
-        <button className="px-3 py-2 bg-cream-100 text-warm-700 text-xs font-medium rounded-lg border border-warm-100">
+        <button className="px-3 py-2 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200">
           Regenerate
         </button>
       </div>
@@ -248,31 +247,29 @@ function StepVisual({ variant }: { variant: string }) {
 
 export function AIContentStudio() {
   const formats = [
-    { icon: ImageIcon, label: 'Product photos',  desc: 'Studio-quality images from a single product shot' },
-    { icon: Layers,    label: 'Social carousels', desc: '5-slide Instagram + TikTok posts in your tone' },
-    { icon: MessageCircle, label: 'Captions',     desc: 'Short captions that actually feel human' },
-    { icon: Wand2,     label: 'Product copy',     desc: 'Descriptions that convert, written for your brand' },
+    { icon: ImageIcon,     label: 'Product photos',  desc: 'Studio-quality images from a single product shot' },
+    { icon: Layers,        label: 'Social carousels', desc: '5-slide Instagram + TikTok posts in your tone' },
+    { icon: MessageCircle, label: 'Captions',         desc: 'Short captions that actually feel human' },
+    { icon: Wand2,         label: 'Product copy',     desc: 'Descriptions that convert, written for your brand' },
   ];
 
   return (
-    <section id="features" className="bg-warm-900 py-24 sm:py-32 relative overflow-hidden">
-      {/* Decorative gradient */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-br from-terra-500/20 to-transparent rounded-full blur-3xl" />
+    <section id="features" className="bg-slate-900 py-24 relative overflow-hidden">
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-br from-brand-500/20 to-transparent rounded-full blur-3xl" />
 
-      <div className="max-w-6xl mx-auto px-6 relative">
+      <div className="max-w-7xl mx-auto px-6 relative">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-start">
 
-          {/* Left — copy */}
           <div className="lg:sticky lg:top-24">
-            <p className="text-xs uppercase tracking-[0.2em] text-terra-400 font-medium mb-4">
+            <div className="inline-flex items-center gap-2 bg-brand-500/10 border border-brand-500/30 text-brand-300 text-xs font-semibold px-3 py-1.5 rounded-full mb-4">
               Content Studio
-            </p>
-            <h2 className="font-serif-display text-4xl sm:text-5xl lg:text-6xl text-white leading-[1.1] tracking-tight mb-6">
+            </div>
+            <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl font-800 text-white leading-[1.1] tracking-tight mb-6">
               All your content,
               <br />
-              <span className="italic text-terra-400">one click away.</span>
+              <span className="text-brand-400">one click away.</span>
             </h2>
-            <p className="text-warm-400 text-base sm:text-lg leading-relaxed mb-8 max-w-md">
+            <p className="text-slate-400 text-base sm:text-lg leading-relaxed mb-10 max-w-md">
               Connect your products. Pick a format. AI writes copy that sounds like you,
               creates images that fit your brand, and keeps everything in your voice.
             </p>
@@ -280,12 +277,12 @@ export function AIContentStudio() {
             <div className="space-y-4 mb-10">
               {formats.map((f, i) => (
                 <div key={i} className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-warm-800 border border-warm-700 flex items-center justify-center flex-shrink-0">
-                    <f.icon className="w-4 h-4 text-terra-400" />
+                  <div className="w-9 h-9 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center flex-shrink-0">
+                    <f.icon className="w-4 h-4 text-brand-400" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-white mb-0.5">{f.label}</p>
-                    <p className="text-xs text-warm-400">{f.desc}</p>
+                    <p className="text-sm font-semibold text-white mb-0.5">{f.label}</p>
+                    <p className="text-xs text-slate-400">{f.desc}</p>
                   </div>
                 </div>
               ))}
@@ -293,78 +290,77 @@ export function AIContentStudio() {
 
             <Link
               href="/register"
-              className="group inline-flex items-center gap-2 bg-terra-500 hover:bg-terra-600 text-white text-sm font-medium px-6 py-3 rounded-full transition-all"
+              className="group inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-white text-sm font-semibold px-6 py-3 rounded-xl transition-all shadow-lg"
             >
               Try Content Studio free
               <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
             </Link>
           </div>
 
-          {/* Right — visual demo */}
           <div className="space-y-4">
             {/* Mock 1: Instagram post */}
             <div className="bg-white rounded-2xl overflow-hidden shadow-2xl">
-              <div className="aspect-square bg-gradient-to-br from-cream-100 via-terra-50 to-cream-200 flex items-center justify-center relative">
+              <div className="aspect-square bg-gradient-to-br from-slate-100 via-brand-50 to-slate-200 flex items-center justify-center relative">
                 <div className="text-center px-8">
-                  <p className="font-serif-display text-3xl text-warm-900 italic mb-2">
+                  <p className="font-display text-3xl font-700 text-slate-900 mb-2">
                     Hand-crafted
                   </p>
-                  <p className="font-serif-display text-3xl text-warm-900 mb-3">
+                  <p className="font-display text-3xl font-800 text-slate-900 mb-3">
                     in the Netherlands
                   </p>
-                  <div className="w-16 h-px bg-terra-500 mx-auto" />
+                  <div className="w-16 h-px bg-brand-600 mx-auto" />
                 </div>
                 <div className="absolute bottom-4 right-4 px-2 py-1 bg-white/80 backdrop-blur rounded-md">
-                  <p className="text-[9px] text-warm-700 font-medium">AI generated · 3 sec ago</p>
+                  <p className="text-[9px] text-slate-700 font-semibold">AI generated · 3 sec ago</p>
                 </div>
               </div>
               <div className="p-4">
-                <p className="text-sm text-warm-900 leading-relaxed">
+                <p className="text-sm text-slate-900 leading-relaxed">
                   Made by hand. Made to last. The serving board you'll pass down. ✨
                 </p>
-                <p className="text-xs text-brand-600 mt-2">
+                <p className="text-xs text-brand-600 mt-2 font-medium">
                   #handmade #dutchdesign #dinnertable #foodlover
                 </p>
               </div>
             </div>
 
             {/* Mock 2: Generation panel */}
-            <div className="bg-warm-800 border border-warm-700 rounded-2xl p-5">
+            <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5">
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-7 h-7 rounded-lg bg-terra-500/20 flex items-center justify-center">
-                  <Sparkles className="w-3.5 h-3.5 text-terra-400" />
+                <div className="w-7 h-7 rounded-lg bg-brand-500/20 flex items-center justify-center">
+                  <Sparkles className="w-3.5 h-3.5 text-brand-400" />
                 </div>
-                <span className="text-sm font-medium text-white">Just generated</span>
+                <span className="text-sm font-semibold text-white">Just generated</span>
               </div>
 
               <div className="space-y-2">
-                <div className="bg-warm-900/50 rounded-lg p-3 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-md bg-cream-100 flex items-center justify-center flex-shrink-0">
-                    <ImageIcon className="w-4 h-4 text-warm-500" />
+                <div className="bg-slate-900/50 rounded-lg p-3 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-md bg-slate-700 flex items-center justify-center flex-shrink-0">
+                    <ImageIcon className="w-4 h-4 text-slate-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-white font-medium">Holiday gift carousel</p>
-                    <p className="text-xs text-warm-400">5 slides · Instagram</p>
+                    <p className="text-xs text-white font-semibold">Holiday gift carousel</p>
+                    <p className="text-xs text-slate-400">5 slides · Instagram</p>
                   </div>
                   <Check className="w-4 h-4 text-emerald-400" />
                 </div>
-                <div className="bg-warm-900/50 rounded-lg p-3 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-md bg-cream-100 flex items-center justify-center flex-shrink-0">
-                    <MessageCircle className="w-4 h-4 text-warm-500" />
+                <div className="bg-slate-900/50 rounded-lg p-3 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-md bg-slate-700 flex items-center justify-center flex-shrink-0">
+                    <MessageCircle className="w-4 h-4 text-slate-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-white font-medium">TikTok hook script</p>
-                    <p className="text-xs text-warm-400">15 sec · Vertical</p>
+                    <p className="text-xs text-white font-semibold">TikTok hook script</p>
+                    <p className="text-xs text-slate-400">15 sec · Vertical</p>
                   </div>
                   <Check className="w-4 h-4 text-emerald-400" />
                 </div>
-                <div className="bg-warm-900/50 rounded-lg p-3 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-md bg-cream-100 flex items-center justify-center flex-shrink-0">
-                    <Wand2 className="w-4 h-4 text-warm-500" />
+                <div className="bg-slate-900/50 rounded-lg p-3 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-md bg-slate-700 flex items-center justify-center flex-shrink-0">
+                    <Wand2 className="w-4 h-4 text-slate-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-white font-medium">SEO product description</p>
-                    <p className="text-xs text-warm-400">240 words · NL + EN</p>
+                    <p className="text-xs text-white font-semibold">SEO product description</p>
+                    <p className="text-xs text-slate-400">240 words · NL + EN</p>
                   </div>
                   <Check className="w-4 h-4 text-emerald-400" />
                 </div>
@@ -383,74 +379,74 @@ export function AIContentStudio() {
 
 export function AIAds() {
   return (
-    <section className="bg-cream py-24 sm:py-32 relative overflow-hidden">
-      <div className="max-w-6xl mx-auto px-6">
+    <section className="bg-white py-24 relative overflow-hidden">
+      <div className="max-w-7xl mx-auto px-6">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-start">
 
-          {/* Left — visual demo (5 ad concepts) */}
+          {/* Left: visual demo */}
           <div className="order-2 lg:order-1 space-y-3">
-            <div className="text-xs uppercase tracking-[0.2em] text-warm-500 font-medium mb-4 px-1">
+            <div className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-4 px-1">
               Sample campaign · 5 concepts
             </div>
 
             {[
-              { angle: 'Lifestyle', headline: 'The board everyone asks about', cta: 'Shop now', tone: 'cream' },
-              { angle: 'UGC',       headline: '"Best gift I\'ve ever given"',     cta: 'See reviews', tone: 'dark' },
-              { angle: 'Promo',     headline: '20% off — this week only',         cta: 'Get yours',  tone: 'cream' },
-              { angle: 'Pain point', headline: 'Done with cheap plastic boards?', cta: 'Upgrade',    tone: 'cream' },
-              { angle: 'Social proof', headline: 'Joined by 1,200+ Dutch homes',  cta: 'Learn more', tone: 'cream' },
+              { angle: 'Lifestyle',    headline: 'The board everyone asks about',     cta: 'Shop now',    tone: 'light' },
+              { angle: 'UGC',          headline: '"Best gift I\'ve ever given"',       cta: 'See reviews', tone: 'dark'  },
+              { angle: 'Promo',        headline: '20% off — this week only',           cta: 'Get yours',   tone: 'light' },
+              { angle: 'Pain point',   headline: 'Done with cheap plastic boards?',    cta: 'Upgrade',     tone: 'light' },
+              { angle: 'Social proof', headline: 'Joined by 1,200+ Dutch homes',       cta: 'Learn more',  tone: 'light' },
             ].map((ad, i) => (
               <div
                 key={i}
                 className={`rounded-xl p-4 flex items-center gap-4 border transition-all hover:scale-[1.01] ${
                   ad.tone === 'dark'
-                    ? 'bg-warm-900 border-warm-800 text-white'
-                    : 'bg-white border-warm-100 text-warm-900'
+                    ? 'bg-slate-900 border-slate-800 text-white'
+                    : 'bg-white border-slate-200 text-slate-900 shadow-sm'
                 }`}
               >
                 <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                  ad.tone === 'dark' ? 'bg-terra-500/20' : 'bg-terra-50'
+                  ad.tone === 'dark' ? 'bg-brand-500/20' : 'bg-brand-50'
                 }`}>
-                  <span className={`text-[10px] font-medium uppercase tracking-wider ${
-                    ad.tone === 'dark' ? 'text-terra-400' : 'text-terra-600'
+                  <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                    ad.tone === 'dark' ? 'text-brand-300' : 'text-brand-700'
                   }`}>
                     {ad.angle.slice(0, 3)}
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-[10px] uppercase tracking-wider mb-0.5 ${
-                    ad.tone === 'dark' ? 'text-warm-400' : 'text-warm-500'
+                  <p className={`text-[10px] uppercase tracking-wider mb-0.5 font-semibold ${
+                    ad.tone === 'dark' ? 'text-slate-400' : 'text-slate-500'
                   }`}>
                     {ad.angle}
                   </p>
-                  <p className="text-sm font-medium leading-snug">{ad.headline}</p>
+                  <p className="text-sm font-semibold leading-snug">{ad.headline}</p>
                 </div>
-                <div className={`px-3 py-1.5 rounded-md text-xs font-medium flex-shrink-0 ${
-                  ad.tone === 'dark' ? 'bg-white/10 text-white' : 'bg-cream-100 text-warm-900'
+                <div className={`px-3 py-1.5 rounded-md text-xs font-semibold flex-shrink-0 ${
+                  ad.tone === 'dark' ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-900'
                 }`}>
                   {ad.cta}
                 </div>
               </div>
             ))}
 
-            <div className="bg-terra-50 border border-terra-200 rounded-xl p-4 text-center">
-              <p className="text-sm text-terra-600 font-medium">
+            <div className="bg-brand-50 border border-brand-200 rounded-xl p-4 text-center">
+              <p className="text-sm text-brand-700 font-semibold">
                 + 10 more variations ready to launch
               </p>
             </div>
           </div>
 
-          {/* Right — copy */}
+          {/* Right: copy */}
           <div className="order-1 lg:order-2">
-            <p className="text-xs uppercase tracking-[0.2em] text-terra-600 font-medium mb-4">
+            <div className="inline-flex items-center gap-2 bg-brand-50 text-brand-700 text-xs font-semibold px-3 py-1.5 rounded-full mb-4">
               Meta Ad Studio
-            </p>
-            <h2 className="font-serif-display text-4xl sm:text-5xl lg:text-6xl text-warm-900 leading-[1.1] tracking-tight mb-6">
+            </div>
+            <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl font-800 text-slate-900 leading-[1.1] tracking-tight mb-6">
               15 fresh ad ideas.
               <br />
-              <span className="italic text-terra-600">In one click.</span>
+              <span className="text-brand-600">In one click.</span>
             </h2>
-            <p className="text-warm-700 text-base sm:text-lg leading-relaxed mb-8 max-w-md">
+            <p className="text-slate-600 text-base sm:text-lg leading-relaxed mb-8 max-w-md">
               Tell us about your product. We generate 5 different angles, 3 hook variations each.
               All grounded in real product data — never made-up claims.
             </p>
@@ -462,9 +458,9 @@ export function AIAds() {
                 'Review every ad before it goes live',
                 'Push directly to your Meta account when ready',
               ].map((item, i) => (
-                <li key={i} className="flex items-start gap-3 text-warm-700">
-                  <div className="w-5 h-5 rounded-full bg-terra-50 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Check className="w-3 h-3 text-terra-600" />
+                <li key={i} className="flex items-start gap-3 text-slate-700">
+                  <div className="w-5 h-5 rounded-full bg-brand-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Check className="w-3 h-3 text-brand-600" />
                   </div>
                   <span className="text-sm leading-relaxed">{item}</span>
                 </li>
@@ -473,7 +469,7 @@ export function AIAds() {
 
             <Link
               href="/register"
-              className="group inline-flex items-center gap-2 bg-warm-900 hover:bg-warm-700 text-white text-sm font-medium px-6 py-3 rounded-full transition-all"
+              className="group inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-6 py-3 rounded-xl transition-all shadow-lg"
             >
               Generate your first campaign
               <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
@@ -487,23 +483,23 @@ export function AIAds() {
 }
 
 // ════════════════════════════════════════════════════════════════
-// PLATFORM BAR — works with
+// PLATFORM BAR
 // ════════════════════════════════════════════════════════════════
 
 export function PlatformBar() {
   const platforms = [
-    { name: 'Shopify',  desc: 'Live'         },
-    { name: 'Bol.com',  desc: 'Live'         },
-    { name: 'Meta Ads', desc: 'Live'         },
-    { name: 'Google Ads', desc: 'Live'       },
-    { name: 'TikTok',   desc: 'Coming soon'  },
-    { name: 'Amazon',   desc: 'Coming soon'  },
+    { name: 'Shopify',    desc: 'Live'        },
+    { name: 'Bol.com',    desc: 'Live'        },
+    { name: 'Meta Ads',   desc: 'Live'        },
+    { name: 'Google Ads', desc: 'Live'        },
+    { name: 'TikTok',     desc: 'Coming soon' },
+    { name: 'Amazon',     desc: 'Coming soon' },
   ];
 
   return (
-    <section className="bg-cream-100 py-16 border-y border-warm-100">
-      <div className="max-w-5xl mx-auto px-6">
-        <p className="text-center text-xs uppercase tracking-[0.2em] text-warm-500 font-medium mb-8">
+    <section className="bg-slate-50 py-16 border-y border-slate-100">
+      <div className="max-w-7xl mx-auto px-6">
+        <p className="text-center text-xs uppercase tracking-wider text-slate-500 font-semibold mb-8">
           Plays nice with the tools you use
         </p>
 
@@ -511,11 +507,11 @@ export function PlatformBar() {
           {platforms.map(p => (
             <div
               key={p.name}
-              className="bg-white border border-warm-100 rounded-xl px-4 py-5 text-center hover:shadow-md transition-shadow"
+              className="bg-white border border-slate-200 rounded-xl px-4 py-5 text-center hover:shadow-md transition-shadow"
             >
-              <p className="font-serif-display text-warm-900 text-base mb-1">{p.name}</p>
-              <p className={`text-[10px] font-medium ${
-                p.desc === 'Live' ? 'text-emerald-600' : 'text-warm-400'
+              <p className="font-display font-700 text-slate-900 text-base mb-1">{p.name}</p>
+              <p className={`text-[10px] font-semibold ${
+                p.desc === 'Live' ? 'text-emerald-600' : 'text-slate-400'
               }`}>
                 {p.desc === 'Live' ? '● Live' : '○ Coming soon'}
               </p>
@@ -580,19 +576,17 @@ const plans = [
 
 export function Pricing() {
   return (
-    <section id="pricing" className="bg-cream py-24 sm:py-32">
-      <div className="max-w-6xl mx-auto px-6">
+    <section id="pricing" className="bg-white py-24">
+      <div className="max-w-7xl mx-auto px-6">
 
         <div className="max-w-2xl mx-auto text-center mb-16">
-          <p className="text-xs uppercase tracking-[0.2em] text-terra-600 font-medium mb-4">
+          <div className="inline-flex items-center gap-2 bg-brand-50 text-brand-700 text-xs font-semibold px-3 py-1.5 rounded-full mb-4">
             Pricing
-          </p>
-          <h2 className="font-serif-display text-4xl sm:text-5xl text-warm-900 leading-tight tracking-tight mb-5">
-            Honest pricing.
-            <br />
-            <span className="italic">No surprises.</span>
+          </div>
+          <h2 className="font-display text-4xl sm:text-5xl font-800 text-slate-900 leading-tight tracking-tight mb-4">
+            Honest pricing. <span className="text-brand-600">No surprises.</span>
           </h2>
-          <p className="text-warm-700 text-base sm:text-lg max-w-xl mx-auto">
+          <p className="text-slate-500 text-lg max-w-xl mx-auto">
             Start with 14 days free. No credit card needed.
             Cancel any time, keep what you generated.
           </p>
@@ -604,29 +598,29 @@ export function Pricing() {
               key={plan.slug}
               className={`relative rounded-3xl p-8 transition-all ${
                 plan.popular
-                  ? 'bg-warm-900 text-white border-2 border-terra-500 shadow-xl lg:scale-105'
-                  : 'bg-white text-warm-900 border border-warm-100 shadow-sm hover:shadow-md'
+                  ? 'bg-slate-900 text-white border-2 border-brand-500 shadow-xl lg:scale-105'
+                  : 'bg-white text-slate-900 border border-slate-200 shadow-sm hover:shadow-md'
               }`}
             >
               {plan.popular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <div className="bg-terra-500 text-white text-[10px] uppercase tracking-[0.15em] font-semibold px-3 py-1 rounded-full">
+                  <div className="bg-brand-600 text-white text-[10px] uppercase tracking-wider font-bold px-3 py-1 rounded-full">
                     Most popular
                   </div>
                 </div>
               )}
 
               <div className="mb-6">
-                <h3 className="font-serif-display text-2xl mb-2">{plan.name}</h3>
-                <p className={`text-sm leading-relaxed ${plan.popular ? 'text-warm-400' : 'text-warm-500'}`}>
+                <h3 className="font-display text-2xl font-800 mb-2">{plan.name}</h3>
+                <p className={`text-sm leading-relaxed ${plan.popular ? 'text-slate-400' : 'text-slate-500'}`}>
                   {plan.desc}
                 </p>
               </div>
 
-              <div className="mb-6 pb-6 border-b border-warm-100/20">
+              <div className="mb-6 pb-6 border-b border-slate-100/20">
                 <div className="flex items-baseline gap-1">
-                  <span className="font-serif-display text-5xl font-500">€{plan.price}</span>
-                  <span className={`text-sm ${plan.popular ? 'text-warm-400' : 'text-warm-500'}`}>
+                  <span className="font-display text-5xl font-800">€{plan.price}</span>
+                  <span className={`text-sm ${plan.popular ? 'text-slate-400' : 'text-slate-500'}`}>
                     /month
                   </span>
                 </div>
@@ -636,9 +630,9 @@ export function Pricing() {
                 {plan.features.map((f, i) => (
                   <li key={i} className="flex items-start gap-2.5 text-sm">
                     <Check className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
-                      plan.popular ? 'text-terra-400' : 'text-terra-600'
+                      plan.popular ? 'text-brand-400' : 'text-brand-600'
                     }`} />
-                    <span className={plan.popular ? 'text-warm-300' : 'text-warm-700'}>
+                    <span className={plan.popular ? 'text-slate-300' : 'text-slate-700'}>
                       {f}
                     </span>
                   </li>
@@ -647,10 +641,10 @@ export function Pricing() {
 
               <Link
                 href={`/register?plan=${plan.slug}`}
-                className={`block text-center font-medium px-6 py-3 rounded-full transition-all ${
+                className={`block text-center font-semibold px-6 py-3 rounded-xl transition-all ${
                   plan.popular
-                    ? 'bg-terra-500 hover:bg-terra-600 text-white'
-                    : 'bg-warm-900 hover:bg-warm-700 text-white'
+                    ? 'bg-white text-brand-600 hover:bg-slate-50'
+                    : 'bg-brand-600 hover:bg-brand-700 text-white'
                 }`}
               >
                 {plan.cta}
@@ -659,7 +653,7 @@ export function Pricing() {
           ))}
         </div>
 
-        <p className="text-center text-xs text-warm-500 mt-10">
+        <p className="text-center text-xs text-slate-500 mt-10">
           All plans include 14 days free · No credit card · Cancel anytime
         </p>
       </div>
@@ -702,15 +696,15 @@ export function FAQ() {
   const [open, setOpen] = useState<number | null>(0);
 
   return (
-    <section id="faq" className="bg-cream-100 py-24 sm:py-32">
+    <section id="faq" className="bg-slate-50 py-24">
       <div className="max-w-3xl mx-auto px-6">
 
         <div className="text-center mb-16">
-          <p className="text-xs uppercase tracking-[0.2em] text-terra-600 font-medium mb-4">
+          <div className="inline-flex items-center gap-2 bg-brand-50 text-brand-700 text-xs font-semibold px-3 py-1.5 rounded-full mb-4">
             Questions
-          </p>
-          <h2 className="font-serif-display text-4xl sm:text-5xl text-warm-900 leading-tight tracking-tight">
-            Everything you might be <span className="italic">wondering</span>.
+          </div>
+          <h2 className="font-display text-4xl sm:text-5xl font-800 text-slate-900 leading-tight tracking-tight">
+            Everything you might be <span className="text-brand-600">wondering</span>.
           </h2>
         </div>
 
@@ -719,26 +713,26 @@ export function FAQ() {
             <div
               key={i}
               className={`bg-white rounded-2xl border transition-all overflow-hidden ${
-                open === i ? 'border-terra-200 shadow-sm' : 'border-warm-100'
+                open === i ? 'border-brand-200 shadow-sm' : 'border-slate-200'
               }`}
             >
               <button
                 onClick={() => setOpen(open === i ? null : i)}
                 className="w-full px-6 py-5 flex items-center justify-between gap-4 text-left"
               >
-                <span className="font-serif-display text-lg text-warm-900 leading-snug">
+                <span className="font-display font-700 text-lg text-slate-900 leading-snug">
                   {faq.q}
                 </span>
-                <div className="w-7 h-7 rounded-full bg-cream-100 flex items-center justify-center flex-shrink-0">
+                <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
                   {open === i ? (
-                    <Minus className="w-3.5 h-3.5 text-warm-700" />
+                    <Minus className="w-3.5 h-3.5 text-slate-700" />
                   ) : (
-                    <Plus className="w-3.5 h-3.5 text-warm-700" />
+                    <Plus className="w-3.5 h-3.5 text-slate-700" />
                   )}
                 </div>
               </button>
               {open === i && (
-                <div className="px-6 pb-5 text-warm-700 text-sm leading-relaxed">
+                <div className="px-6 pb-5 text-slate-600 text-sm leading-relaxed">
                   {faq.a}
                 </div>
               )}
@@ -751,25 +745,19 @@ export function FAQ() {
 }
 
 // ════════════════════════════════════════════════════════════════
-// CTA — final push
+// CTA
 // ════════════════════════════════════════════════════════════════
 
 export function CTA() {
   return (
-    <section className="bg-warm-900 py-24 sm:py-32 relative overflow-hidden">
-      {/* Warm gradient */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-br from-terra-500/15 via-transparent to-transparent rounded-full blur-3xl" />
+    <section className="bg-gradient-to-br from-brand-600 to-brand-700 py-24 relative overflow-hidden">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-br from-brand-400/30 via-transparent to-transparent rounded-full blur-3xl" />
 
       <div className="max-w-3xl mx-auto px-6 text-center relative">
-        <p className="text-xs uppercase tracking-[0.2em] text-terra-400 font-medium mb-6">
-          Let's grow together
-        </p>
-        <h2 className="font-serif-display text-4xl sm:text-5xl lg:text-6xl text-white leading-[1.1] tracking-tight mb-6">
-          Your store deserves
-          <br />
-          <span className="italic text-terra-400">more than guesswork.</span>
+        <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl font-800 text-white leading-[1.1] tracking-tight mb-6">
+          Your store deserves more than guesswork.
         </h2>
-        <p className="text-warm-400 text-lg leading-relaxed mb-10 max-w-xl mx-auto">
+        <p className="text-brand-100 text-lg leading-relaxed mb-10 max-w-xl mx-auto">
           14 days free. No credit card. We help you grow,
           even if you don't know where to start.
         </p>
@@ -777,20 +765,20 @@ export function CTA() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
           <Link
             href="/register"
-            className="group flex items-center gap-2 bg-terra-500 hover:bg-terra-600 text-white font-medium px-7 py-3.5 rounded-full transition-all shadow-lg text-sm"
+            className="group flex items-center gap-2 bg-white text-brand-600 hover:bg-brand-50 font-semibold px-8 py-4 rounded-xl transition-all shadow-lg text-sm"
           >
-            Start free trial
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+            Start your free trial
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </Link>
           <a
             href="#pricing"
-            className="inline-flex items-center gap-2 text-warm-400 hover:text-white text-sm font-medium underline-offset-4 hover:underline transition-colors"
+            className="inline-flex items-center gap-2 text-brand-100 hover:text-white text-sm font-medium underline-offset-4 hover:underline transition-colors"
           >
             See pricing
           </a>
         </div>
 
-        <p className="text-warm-500 text-xs">
+        <p className="text-brand-200 text-xs">
           Built by ecommerce founders, for ecommerce founders.
         </p>
       </div>
@@ -824,26 +812,26 @@ export function Footer() {
     {
       title: 'Legal',
       links: [
-        { label: 'Privacy', href: '/privacy' },
-        { label: 'Terms',   href: '/terms' },
+        { label: 'Privacy',  href: '/privacy' },
+        { label: 'Terms',    href: '/terms' },
         { label: 'Security', href: '/privacy' },
       ],
     },
   ];
 
   return (
-    <footer className="bg-warm-900 text-warm-400 pt-16 pb-8 border-t border-warm-800">
-      <div className="max-w-6xl mx-auto px-6">
+    <footer className="bg-slate-900 text-slate-400 py-16">
+      <div className="max-w-7xl mx-auto px-6">
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-12 mb-12 pb-12 border-b border-warm-800">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
           <div className="lg:col-span-1">
-            <Link href="/" className="flex items-center gap-2.5 text-white mb-4">
-              <div className="w-8 h-8 rounded-xl bg-warm-800 flex items-center justify-center">
-                <Zap className="w-4 h-4 text-terra-400" fill="currentColor" />
+            <div className="flex items-center gap-2 text-white font-display font-700 text-lg mb-3">
+              <div className="w-7 h-7 rounded-lg bg-brand-600 flex items-center justify-center">
+                <Zap className="w-3.5 h-3.5 text-white" fill="white" />
               </div>
-              <span className="font-serif-display font-600 text-xl">MarketGrow</span>
-            </Link>
-            <p className="text-sm leading-relaxed text-warm-400 max-w-xs">
+              MarketGrow
+            </div>
+            <p className="text-sm leading-relaxed">
               The AI co-pilot for ecommerce founders.
               We help you grow, even if you don't know where to start.
             </p>
@@ -851,11 +839,11 @@ export function Footer() {
 
           {cols.map(col => (
             <div key={col.title}>
-              <h4 className="text-white font-medium text-sm mb-4">{col.title}</h4>
-              <ul className="space-y-3">
+              <h4 className="text-white text-sm font-semibold mb-4">{col.title}</h4>
+              <ul className="space-y-2">
                 {col.links.map(l => (
                   <li key={l.label}>
-                    <a href={l.href} className="text-sm text-warm-400 hover:text-white transition-colors">
+                    <a href={l.href} className="text-sm hover:text-white transition-colors">
                       {l.label}
                     </a>
                   </li>
@@ -865,9 +853,9 @@ export function Footer() {
           ))}
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-warm-500">
+        <div className="border-t border-slate-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
           <p>© {new Date().getFullYear()} MarketGrow. Made with care for ecommerce founders.</p>
-          <p className="font-serif-display italic">hello@marketgrow.ai</p>
+          <p>hello@marketgrow.ai</p>
         </div>
       </div>
     </footer>
