@@ -25,86 +25,82 @@ export function Navbar() {
     <header
       className={`fixed top-0 inset-x-0 z-50 transition-all ${
         scrolled
-          ? 'bg-cream/85 backdrop-blur-md border-b border-warm-100'
+          ? 'bg-white/85 backdrop-blur-md border-b border-slate-200'
           : 'bg-transparent'
       }`}
     >
-      <nav className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <nav className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
 
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-xl bg-warm-900 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
-            <Zap className="w-4 h-4 text-terra-400" fill="currentColor" />
+        <Link href="/" className="flex items-center gap-2 group">
+          <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+            <Zap className="w-4 h-4 text-white" fill="white" />
           </div>
-          <span className="font-serif-display font-600 text-warm-900 text-xl tracking-tight">
+          <span className="font-display font-700 text-slate-900 text-lg tracking-tight">
             MarketGrow
           </span>
         </Link>
 
-        {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-8">
           {links.map(l => (
             <a
               key={l.href}
               href={l.href}
-              className="text-sm font-medium text-warm-700 hover:text-warm-900 transition-colors"
+              className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
             >
               {l.label}
             </a>
           ))}
         </div>
 
-        {/* Desktop CTAs */}
         <div className="hidden md:flex items-center gap-3">
           <Link
             href="/login"
-            className="text-sm font-medium text-warm-700 hover:text-warm-900 transition-colors"
+            className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
           >
             Sign in
           </Link>
           <Link
             href="/register"
-            className="bg-warm-900 hover:bg-warm-700 text-white text-sm font-medium px-4 py-2 rounded-full transition-colors shadow-sm"
+            className="bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm"
           >
             Start free trial
           </Link>
         </div>
 
-        {/* Mobile menu trigger */}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="md:hidden p-2 -mr-2 text-warm-900"
+          className="md:hidden p-2 -mr-2 text-slate-900"
           aria-label="Toggle menu"
         >
           {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
       </nav>
 
-      {/* Mobile menu */}
       {isOpen && (
-        <div className="md:hidden bg-cream border-t border-warm-100">
+        <div className="md:hidden bg-white border-t border-slate-200">
           <div className="px-6 py-4 space-y-3">
             {links.map(l => (
               <a
                 key={l.href}
                 href={l.href}
                 onClick={() => setIsOpen(false)}
-                className="block text-sm font-medium text-warm-700 py-2"
+                className="block text-sm font-medium text-slate-600 py-2"
               >
                 {l.label}
               </a>
             ))}
-            <div className="pt-3 border-t border-warm-100 flex flex-col gap-3">
+            <div className="pt-3 border-t border-slate-200 flex flex-col gap-3">
               <Link
                 href="/login"
                 onClick={() => setIsOpen(false)}
-                className="text-sm font-medium text-warm-700"
+                className="text-sm font-medium text-slate-600"
               >
                 Sign in
               </Link>
               <Link
                 href="/register"
                 onClick={() => setIsOpen(false)}
-                className="bg-warm-900 text-white text-sm font-medium px-4 py-2.5 rounded-full text-center"
+                className="bg-brand-600 text-white text-sm font-semibold px-4 py-2.5 rounded-lg text-center"
               >
                 Start free trial
               </Link>
