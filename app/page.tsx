@@ -14,7 +14,7 @@ import {
 
 export default function HomePage() {
   return (
-    <main className="overflow-x-hidden bg-cream">
+    <main className="overflow-x-hidden">
       <Navbar />
       <Hero />
       <PainPoints />
