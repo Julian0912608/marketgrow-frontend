@@ -7,9 +7,9 @@
 //   - Roept platform-specifieke sync endpoints aan met integration_id
 //
 // V0 Gap 1: Bol.com gated achter useFeatureFlag('integration_bol').
-//   In NL/BE altijd zichtbaar, andere landen verborgen (zie feature_flags seed).
-//   Connected Bol stores blijven zichtbaar onder "Connected stores" zodat een
-//   tenant die ooit Bol gebruikte na country-wissel z'n data niet kwijtraakt.
+//   In NL/BE altijd zichtbaar, andere landen verborgen.
+//   Connected Bol stores blijven onder "Connected stores" zichtbaar zodat
+//   data niet onbereikbaar wordt na country-switch.
 
 import { useState, useEffect } from 'react';
 import {
@@ -260,7 +260,7 @@ export default function IntegrationsPage() {
     (c: any) => !ADV_PLATFORMS[c.platformSlug ?? c.platform]
   );
 
-  const isMetaConnected      = advIntegrations.some(a => a.platform === 'meta_ads');
+  const isMetaConnected = advIntegrations.some(a => a.platform === 'meta_ads');
   const isBolcomAdsConnected = advIntegrations.some(a => a.platform === 'bolcom_ads');
 
   // V0 Gap 1: filter Bol.com uit "Add platform" grid wanneer feature flag uit staat.
@@ -297,7 +297,7 @@ export default function IntegrationsPage() {
               <div key={c.id} className="bg-slate-800/50 border border-slate-700/50 rounded-xl px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center text-xs font-bold text-white shrink-0">
-                    {(c.shopName || c.platformName || c.platformSlug || '?').split(' ')[0].toUpperCase()}
+                    {(c.shopName || c.platformName || c.platformSlug || '?')[0].toUpperCase()}
                   </div>
                   <div>
                     <div className="text-sm font-medium text-white">
@@ -358,12 +358,11 @@ export default function IntegrationsPage() {
                 {platform.type === 'coming_soon' ? (
                   <p className="text-xs text-slate-500 mt-2">Coming soon</p>
                 ) : isConnecting ? (
-                  // ⚠️ RECONSTRUCTED SECTION - check tegen origineel
                   <div className="space-y-2 mt-3">
                     {platform.fields.map(field => (
                       <input
                         key={field}
-                        type={field === 'apiSecret' ? 'password' : 'text'}
+                        type={field.toLowerCase().includes('secret') || field.toLowerCase().includes('token') ? 'password' : 'text'}
                         placeholder={FIELD_LABELS[field] ?? field}
                         value={formData[field] ?? ''}
                         onChange={e => setFormData(f => ({ ...f, [field]: e.target.value }))}
@@ -376,12 +375,12 @@ export default function IntegrationsPage() {
                         disabled={loading}
                         className="flex-1 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-60"
                       >
-                        {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
-                        {loading ? 'Connecting...' : 'Connect'}
+                        {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                        Connect
                       </button>
                       <button
                         onClick={() => { setConnecting(null); setFormData({}); }}
-                        className="px-3 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white text-xs font-medium py-2 rounded-lg transition-colors"
+                        className="px-3 py-2 bg-slate-700 text-slate-400 text-xs rounded-lg hover:bg-slate-600 transition-colors"
                       >
                         Cancel
                       </button>
@@ -389,7 +388,7 @@ export default function IntegrationsPage() {
                   </div>
                 ) : (
                   <button
-                    onClick={() => platform.id === 'shopify'
+                    onClick={() => platform.type === 'oauth' && platform.id === 'shopify'
                       ? handleShopifyInstall()
                       : platform.type === 'oauth'
                       ? handleConnect(platform.id)
@@ -411,7 +410,7 @@ export default function IntegrationsPage() {
         <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Advertising</h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
-          {/* Connected advertising platforms (altijd tonen, ook bij flag uit) */}
+          {/* Connected advertising platforms */}
           {advIntegrations.map(adv => (
             <div key={adv.id} className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5">
               <div className="flex items-center justify-between mb-4">
@@ -484,16 +483,23 @@ export default function IntegrationsPage() {
                       disabled={advLoading || !advForm.clientId || !advForm.clientSecret}
                       className="flex-1 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-60"
                     >
-                      {advLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
-                      {advLoading ? 'Connecting...' : 'Connect'}
+                      {advLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                      Connect
                     </button>
                     <button
                       onClick={() => { setAdvConnecting(false); setAdvForm({ clientId: '', clientSecret: '' }); }}
-                      className="px-3 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white text-xs font-medium py-2 rounded-lg transition-colors"
+                      className="px-3 py-2 bg-slate-700 text-slate-400 text-xs rounded-lg hover:bg-slate-600 transition-colors"
                     >
                       Cancel
                     </button>
                   </div>
+                  <p className="text-xs text-slate-500 pt-1">
+                    Find your credentials at{' '}
+                    <a href="https://retailer.bol.com" target="_blank" rel="noopener noreferrer" className="text-brand-400 underline">
+                      retailer.bol.com
+                    </a>
+                    {' '}→ Settings → API credentials → Advertising
+                  </p>
                 </div>
               ) : (
                 <button
@@ -507,8 +513,7 @@ export default function IntegrationsPage() {
             </div>
           )}
 
-          {/* Meta Ads connect (altijd zichtbaar, niet gated) */}
-          {/* ⚠️ RECONSTRUCTED SECTION - check tegen origineel */}
+          {/* Meta Ads connect tile (alleen als nog niet connected) */}
           {!isMetaConnected && (
             <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5">
               <div className="flex items-center justify-between mb-4">
@@ -518,16 +523,33 @@ export default function IntegrationsPage() {
               </div>
               <h3 className="font-display font-700 text-white mb-1">Meta Ads</h3>
               <p className="text-xs text-slate-500 mb-3">Facebook + Instagram campaign automation</p>
+
               <button
                 onClick={handleMetaConnect}
                 disabled={metaConnecting}
-                className="w-full flex items-center justify-center gap-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white text-xs font-medium py-2 rounded-lg transition-colors disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white text-xs font-medium py-2 rounded-lg transition-colors disabled:opacity-60"
               >
                 {metaConnecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-                {metaConnecting ? 'Connecting...' : 'Connect'}
+                {metaConnecting ? 'Redirecting...' : 'Connect with Facebook'}
               </button>
+              <p className="text-xs text-slate-500 pt-2">
+                You will be redirected to Facebook to grant access to your Business Manager.
+              </p>
             </div>
           )}
+
+          {/* Coming soon */}
+          {[
+            { id: 'tiktok_ads',  name: 'TikTok Ads',  color: 'bg-slate-700/50 border-slate-600/50 text-slate-400' },
+          ].map(p => (
+            <div key={p.id} className="bg-slate-800/30 border border-slate-700/30 rounded-2xl p-5 opacity-50">
+              <div className={`w-10 h-10 rounded-xl border flex items-center justify-center mb-4 ${p.color}`}>
+                <Megaphone className="w-4 h-4" />
+              </div>
+              <h3 className="font-display font-700 text-slate-400 mb-1">{p.name}</h3>
+              <p className="text-xs text-slate-600">Coming soon</p>
+            </div>
+          ))}
         </div>
       </div>
     </div>
