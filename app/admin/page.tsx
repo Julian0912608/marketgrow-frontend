@@ -8,30 +8,6 @@
 // Vereiste env vars (Vercel):
 //   ADMIN_SECRET=jouw-geheime-wachtwoord
 //   NEXT_PUBLIC_API_URL=https://...railway.app
-//
-// Middleware: maak /middleware.ts aan in de root:
-// ============================================================
-/*
-// middleware.ts (root van je Next.js project)
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-
-export function middleware(request: NextRequest) {
-  if (request.nextUrl.pathname.startsWith('/admin')) {
-    const token = request.cookies.get('admin_token')?.value
-                  || request.headers.get('x-admin-token');
-    if (token !== process.env.ADMIN_SECRET) {
-      return NextResponse.redirect(new URL('/admin/login', request.url));
-    }
-  }
-  return NextResponse.next();
-}
-
-export const config = { matcher: ['/admin/:path*'] };
-*/
-
-// ============================================================
-// Het dashboard zelf
 // ============================================================
 
 import { useState, useEffect, useCallback } from 'react';
@@ -80,25 +56,32 @@ interface KPIs {
 
 // ── API helper — praat met je Railway backend via admin endpoints ──
 const adminApi = {
-  headers: () => ({
-  'Content-Type': 'application/json',
-  'x-admin-token': document.cookie
-    .split('; ')
-    .find(r => r.startsWith('admin_token='))
-    ?.split('=')[1] || '',
-}),
-base: (process.env.NEXT_PUBLIC_API_URL || 'https://marketgrowth-production.up.railway.app') + '/api',
-  
+  headers(): Record<string, string> {
+    const token = typeof document !== 'undefined'
+      ? document.cookie
+          .split('; ')
+          .find(r => r.startsWith('admin_token='))
+          ?.split('=')[1] || ''
+      : '';
+    return {
+      'Content-Type':  'application/json',
+      'x-admin-token': token,
+    };
+  },
+
+  base: (process.env.NEXT_PUBLIC_API_URL || 'https://marketgrowth-production.up.railway.app') + '/api',
+
   async get<T>(path: string): Promise<T> {
     const res = await fetch(this.base + path, { headers: this.headers() });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   },
+
   async post<T>(path: string, body: unknown): Promise<T> {
     const res = await fetch(this.base + path, {
-      method: 'POST',
+      method:  'POST',
       headers: this.headers(),
-      body: JSON.stringify(body),
+      body:    JSON.stringify(body),
     });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
