@@ -299,12 +299,7 @@ function TenantPanel({
 
           {/* Stripe link */}
           {tenant.stripe_customer_id && (
-            
-              href={`https://dashboard.stripe.com/customers/${tenant.stripe_customer_id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700 font-medium"
-            >
+            <a href={`https://dashboard.stripe.com/customers/${tenant.stripe_customer_id}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700 font-medium">
               <CreditCard className="w-4 h-4" />
               Bekijk in Stripe dashboard
               <ExternalLink className="w-3.5 h-3.5" />
