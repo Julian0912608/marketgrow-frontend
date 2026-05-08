@@ -35,12 +35,13 @@ export const config = { matcher: ['/admin/:path*'] };
 // ============================================================
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import {
   Users, TrendingUp, AlertCircle, CheckCircle,
   RefreshCw, Search, ChevronDown, X, Zap,
   CreditCard, Activity, Settings, LogOut,
   ArrowUpRight, ArrowDownRight, Eye, Edit3,
-  ShieldOff, RotateCcw, ExternalLink,
+  ShieldOff, RotateCcw, ExternalLink, Flag,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────
@@ -315,7 +316,7 @@ function TenantPanel({
 
           {/* Stripe link */}
           {tenant.stripe_customer_id && (
-            <a
+            
               href={`https://dashboard.stripe.com/customers/${tenant.stripe_customer_id}`}
               target="_blank"
               rel="noopener noreferrer"
@@ -398,7 +399,14 @@ export default function AdminDashboard() {
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Link
+              href="/admin/feature-flags"
+              className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+            >
+              <Flag className="w-4 h-4" />
+              Feature flags
+            </Link>
             <button
               onClick={loadData}
               className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
