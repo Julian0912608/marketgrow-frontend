@@ -329,7 +329,7 @@ function OnboardingSection({ tenantId }: { tenantId: string }) {
   );
 }
 
-// ── Billing actions sectie (NIEUW) ───────────────────────────
+// ── Billing actions sectie ───────────────────────────────────
 function BillingActionsSection({
   tenantId, onRefresh,
 }: {
@@ -400,7 +400,6 @@ function BillingActionsSection({
     );
   }
 
-  // Status label
   let statusLabel = '';
   let statusColor = '';
   if (status.tenantStatus === 'active') {
@@ -443,6 +442,21 @@ function BillingActionsSection({
           </div>
         )}
 
+        {/* DRIFT WAARSCHUWING: DB en Stripe matchen niet */}
+        {status.driftDetected && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800 space-y-1">
+            <div className="font-semibold flex items-center gap-1.5">
+              <AlertCircle className="w-3.5 h-3.5" />
+              Drift gedetecteerd
+            </div>
+            <div>
+              DB zegt <strong>{status.tenantStatus}</strong>, maar Stripe sub is{' '}
+              {status.stripeMissing ? <strong>verdwenen</strong> : <><strong>{status.stripeStatus}</strong></>}.
+              Klik &quot;Definitief annuleren&quot; om de DB te syncen.
+            </div>
+          </div>
+        )}
+
         {!status.hasStripeSub && (
           <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
             Geen Stripe subscription gekoppeld. Pause / reactivate niet beschikbaar.
@@ -456,7 +470,6 @@ function BillingActionsSection({
           </div>
         )}
 
-        {/* Confirm cancel dialog */}
         {confirm === 'cancel' ? (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3 space-y-3">
             <p className="text-xs text-red-700">
@@ -515,7 +528,10 @@ function BillingActionsSection({
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-red-50 hover:bg-red-100 text-sm font-medium text-red-700 transition-colors text-left disabled:opacity-50"
               >
                 <XCircle className="w-4 h-4" />
-                Definitief annuleren (Stripe sub. weg)
+                {status.driftDetected
+                  ? 'Definitief annuleren (DB syncen met Stripe)'
+                  : 'Definitief annuleren (Stripe sub. weg)'
+                }
               </button>
             )}
 
@@ -530,7 +546,6 @@ function BillingActionsSection({
     </div>
   );
 }
-
 // ── Klant detail / beheer panel ───────────────────────────────
 function TenantPanel({
   tenant, onClose, onRefresh,
