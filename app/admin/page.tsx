@@ -17,7 +17,8 @@ import {
   RefreshCw, Search, ChevronDown, X, Zap,
   CreditCard, Activity, Settings, LogOut,
   ArrowUpRight, ArrowDownRight, Eye, Edit3,
-  ShieldOff, RotateCcw, ExternalLink, Flag,
+  ShieldOff, RotateCcw, ExternalLink, Flag, Briefcase,
+  Loader2,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────
@@ -53,6 +54,57 @@ interface KPIs {
     scale:   number;
   };
 }
+
+interface OnboardingDetails {
+  status:           'in_progress' | 'skipped' | 'completed';
+  step:             number;
+  completedAt:      string | null;
+  countryCode:      string | null;
+  sellsToCountries: string[] | null;
+  businessGoal:     string | null;
+  marketingStyle:   string | null;
+  shopConnected:    boolean;
+}
+
+// ── Display labels (sync met onboarding wizard) ───────────────
+const COUNTRY_NAMES: Record<string, string> = {
+  AT: 'Austria',         BE: 'Belgium',         BG: 'Bulgaria',
+  HR: 'Croatia',         CY: 'Cyprus',          CZ: 'Czech Republic',
+  DK: 'Denmark',         EE: 'Estonia',         FI: 'Finland',
+  FR: 'France',          DE: 'Germany',         GR: 'Greece',
+  HU: 'Hungary',         IE: 'Ireland',         IT: 'Italy',
+  LV: 'Latvia',          LT: 'Lithuania',       LU: 'Luxembourg',
+  MT: 'Malta',           NL: 'Netherlands',     PL: 'Poland',
+  PT: 'Portugal',        RO: 'Romania',         SK: 'Slovakia',
+  SI: 'Slovenia',        ES: 'Spain',           SE: 'Sweden',
+  GB: 'United Kingdom',  NO: 'Norway',          CH: 'Switzerland',
+  GLOBAL: 'Global (other countries)',
+};
+
+const GOAL_LABELS: Record<string, string> = {
+  'lifestyle':     'Lifestyle income',
+  'steady':        'Steady growth',
+  'scale-to-exit': 'Scale to exit',
+  'side-project':  'Side project',
+};
+
+const STYLE_LABELS: Record<string, string> = {
+  'paid':    'Aggressive paid',
+  'organic': 'Organic and content first',
+  'mix':     'A mix of both',
+};
+
+const ONBOARDING_STATUS_COLORS: Record<string, string> = {
+  completed:    'bg-emerald-100 text-emerald-700',
+  skipped:      'bg-amber-100 text-amber-700',
+  in_progress:  'bg-blue-100 text-blue-700',
+};
+
+const ONBOARDING_STATUS_LABELS: Record<string, string> = {
+  completed:    'Voltooid',
+  skipped:      'Overgeslagen',
+  in_progress:  'Bezig',
+};
 
 // ── API helper — praat met je Railway backend via admin endpoints ──
 const adminApi = {
@@ -139,6 +191,141 @@ const STATUS_COLORS: Record<string, string> = {
   suspended: 'bg-slate-100 text-slate-500',
   cancelled: 'bg-red-50 text-red-400',
 };
+
+// ── Onboarding sectie binnen TenantPanel ─────────────────────
+function OnboardingSection({ tenantId }: { tenantId: string }) {
+  const [data, setData] = useState<OnboardingDetails | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await adminApi.get<OnboardingDetails>(`/admin/tenants/${tenantId}/onboarding`);
+        if (!cancelled) setData(res);
+      } catch (e: any) {
+        if (!cancelled) setError(e.message ?? 'Ophalen mislukt');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [tenantId]);
+
+  if (loading) {
+    return (
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <Briefcase className="w-4 h-4 text-slate-500" />
+          <h3 className="text-sm font-semibold text-slate-900">Onboarding</h3>
+        </div>
+        <div className="bg-slate-50 rounded-xl p-4 flex items-center justify-center">
+          <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <Briefcase className="w-4 h-4 text-slate-500" />
+          <h3 className="text-sm font-semibold text-slate-900">Onboarding</h3>
+        </div>
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-xs text-red-700">
+          {error ?? 'Geen data'}
+        </div>
+      </div>
+    );
+  }
+
+  const sellsToDisplay = data.sellsToCountries && data.sellsToCountries.length > 0
+    ? data.sellsToCountries.map(c => COUNTRY_NAMES[c] ?? c).join(', ')
+    : null;
+
+  const completedDate = data.completedAt
+    ? new Date(data.completedAt).toLocaleDateString('nl-NL', {
+        day: 'numeric', month: 'long', year: 'numeric',
+      })
+    : null;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Briefcase className="w-4 h-4 text-slate-500" />
+          <h3 className="text-sm font-semibold text-slate-900">Onboarding</h3>
+        </div>
+        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${ONBOARDING_STATUS_COLORS[data.status] ?? ''}`}>
+          {ONBOARDING_STATUS_LABELS[data.status] ?? data.status}
+        </span>
+      </div>
+
+      <div className="bg-slate-50 rounded-xl p-4 space-y-3">
+
+        {/* Country */}
+        <div>
+          <div className="text-xs text-slate-500 mb-0.5">Gevestigd in</div>
+          <div className="text-sm font-medium text-slate-900">
+            {data.countryCode
+              ? COUNTRY_NAMES[data.countryCode] ?? data.countryCode
+              : <span className="text-slate-400 italic">Niet ingevuld</span>
+            }
+          </div>
+        </div>
+
+        {/* Sells to */}
+        <div>
+          <div className="text-xs text-slate-500 mb-0.5">Verkoopt aan</div>
+          <div className="text-sm font-medium text-slate-900">
+            {sellsToDisplay ?? <span className="text-slate-400 italic">Niet ingevuld</span>}
+          </div>
+        </div>
+
+        {/* Business goal */}
+        <div>
+          <div className="text-xs text-slate-500 mb-0.5">Business goal</div>
+          <div className="text-sm font-medium text-slate-900">
+            {data.businessGoal
+              ? GOAL_LABELS[data.businessGoal] ?? data.businessGoal
+              : <span className="text-slate-400 italic">Niet ingevuld</span>
+            }
+          </div>
+        </div>
+
+        {/* Marketing style */}
+        <div>
+          <div className="text-xs text-slate-500 mb-0.5">Marketing style</div>
+          <div className="text-sm font-medium text-slate-900">
+            {data.marketingStyle
+              ? STYLE_LABELS[data.marketingStyle] ?? data.marketingStyle
+              : <span className="text-slate-400 italic">Niet ingevuld</span>
+            }
+          </div>
+        </div>
+
+        {/* Shop connected + completed at */}
+        <div className="pt-3 border-t border-slate-200 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-1.5 text-slate-600">
+            {data.shopConnected
+              ? <><CheckCircle className="w-3.5 h-3.5 text-emerald-500" /> Store gekoppeld</>
+              : <><X className="w-3.5 h-3.5 text-slate-400" /> Geen store gekoppeld</>
+            }
+          </div>
+          {completedDate && (
+            <div className="text-slate-500">
+              Afgerond op {completedDate}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ── Klant detail / beheer panel ───────────────────────────────
 function TenantPanel({
@@ -237,6 +424,9 @@ function TenantPanel({
               </div>
             ))}
           </div>
+
+          {/* Onboarding sectie */}
+          <OnboardingSection tenantId={tenant.id} />
 
           {/* Plan wijzigen */}
           <div>
