@@ -13,6 +13,7 @@ import { useAuthStore } from '@/lib/store';
 import { usePermissions } from '@/lib/usePermissions';
 import { AppLoader } from '@/components/dashboard/AppLoader';
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
+import { StartSetupCard } from '@/components/dashboard/StartSetupCard';
 import { PageErrorBoundary, CardErrorBoundary } from '@/components/ErrorBoundary';
 
 interface Stats {
@@ -271,6 +272,7 @@ export default function DashboardPage() {
   return (
     <PageErrorBoundary label="dashboard">
       <div className="p-6 max-w-5xl mx-auto">
+        <StartSetupCard />
         <OnboardingChecklist />
 
         <div className="flex items-center justify-between mb-8">
@@ -357,10 +359,8 @@ export default function DashboardPage() {
                         <div key={i} className="flex items-center justify-between gap-3">
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-white truncate">{p.title}</p>
-                            {/* FIX: total_sold ipv units_sold */}
                             <p className="text-xs text-slate-500">{p.total_sold} sold</p>
                           </div>
-                          {/* FIX: total_revenue (string) ipv revenue, excl. BTW */}
                           <p className="text-sm font-semibold text-emerald-400 flex-shrink-0">
                             {formatCurrency(parseFloat(p.total_revenue ?? '0') / 1.21)}
                           </p>
