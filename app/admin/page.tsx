@@ -4,24 +4,18 @@
 // Admin Monitoring Dashboard — app/admin/page.tsx
 //
 // Auth: gaat via /api/admin-proxy/* (Vercel server route).
-// De proxy leest de httpOnly admin_session cookie en forwardt
-// hem als x-admin-session header naar Railway. Browser raakt
-// het token nooit aan.
-//
-// Vereiste env vars (Vercel):
-//   ADMIN_SECRET=jouw-geheime-wachtwoord
-//   NEXT_PUBLIC_API_URL=https://...railway.app
+// Pause/Cancel/Reactivate: fail-fast, Stripe call eerst.
 // ============================================================
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
   Users, TrendingUp, AlertCircle, CheckCircle,
-  RefreshCw, Search, ChevronDown, X, Zap,
-  CreditCard, Activity, Settings, LogOut,
-  ArrowUpRight, ArrowDownRight, Eye, Edit3,
-  ShieldOff, RotateCcw, ExternalLink, Flag, Briefcase,
-  Loader2,
+  RefreshCw, Search, X, Zap,
+  CreditCard, Activity, Settings,
+  ArrowUpRight, ArrowDownRight, Eye,
+  RotateCcw, ExternalLink, Flag, Briefcase,
+  Loader2, Pause, Play, XCircle,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────
@@ -69,7 +63,18 @@ interface OnboardingDetails {
   shopConnected:    boolean;
 }
 
-// ── Display labels (sync met onboarding wizard) ───────────────
+interface BillingStatus {
+  tenantStatus:       'active' | 'suspended' | 'cancelled';
+  pausedAt:           string | null;
+  subscriptionStatus: 'active' | 'trialing' | 'past_due' | 'cancelled' | null;
+  hasStripeSub:       boolean;
+  hasStripeCustomer:  boolean;
+  canPause:           boolean;
+  canCancel:          boolean;
+  canReactivate:      boolean;
+}
+
+// ── Display labels ────────────────────────────────────────────
 const COUNTRY_NAMES: Record<string, string> = {
   AT: 'Austria',         BE: 'Belgium',         BG: 'Bulgaria',
   HR: 'Croatia',         CY: 'Cyprus',          CZ: 'Czech Republic',
@@ -98,20 +103,18 @@ const STYLE_LABELS: Record<string, string> = {
 };
 
 const ONBOARDING_STATUS_COLORS: Record<string, string> = {
-  completed:    'bg-emerald-100 text-emerald-700',
-  skipped:      'bg-amber-100 text-amber-700',
-  in_progress:  'bg-blue-100 text-blue-700',
+  completed:   'bg-emerald-100 text-emerald-700',
+  skipped:     'bg-amber-100 text-amber-700',
+  in_progress: 'bg-blue-100 text-blue-700',
 };
 
 const ONBOARDING_STATUS_LABELS: Record<string, string> = {
-  completed:    'Voltooid',
-  skipped:      'Overgeslagen',
-  in_progress:  'Bezig',
+  completed:   'Voltooid',
+  skipped:     'Overgeslagen',
+  in_progress: 'Bezig',
 };
 
-// ── API helper — alle calls gaan via /api/admin-proxy/* ──────
-// De Vercel route forwardt de admin_session cookie als
-// x-admin-session header naar Railway.
+// ── API helper ────────────────────────────────────────────────
 const adminApi = {
   base: '/api/admin-proxy',
 
@@ -133,7 +136,14 @@ const adminApi = {
       headers:     { 'Content-Type': 'application/json' },
       body:        JSON.stringify(body),
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) {
+      let msg = `${res.status}`;
+      try {
+        const err = await res.json();
+        msg = err.message ?? err.error ?? msg;
+      } catch {}
+      throw new Error(msg);
+    }
     return res.json();
   },
 };
@@ -190,7 +200,7 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: 'bg-red-50 text-red-400',
 };
 
-// ── Onboarding sectie binnen TenantPanel ─────────────────────
+// ── Onboarding sectie ────────────────────────────────────────
 function OnboardingSection({ tenantId }: { tenantId: string }) {
   const [data, setData] = useState<OnboardingDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -264,8 +274,6 @@ function OnboardingSection({ tenantId }: { tenantId: string }) {
       </div>
 
       <div className="bg-slate-50 rounded-xl p-4 space-y-3">
-
-        {/* Country */}
         <div>
           <div className="text-xs text-slate-500 mb-0.5">Gevestigd in</div>
           <div className="text-sm font-medium text-slate-900">
@@ -276,7 +284,6 @@ function OnboardingSection({ tenantId }: { tenantId: string }) {
           </div>
         </div>
 
-        {/* Sells to */}
         <div>
           <div className="text-xs text-slate-500 mb-0.5">Verkoopt aan</div>
           <div className="text-sm font-medium text-slate-900">
@@ -284,7 +291,6 @@ function OnboardingSection({ tenantId }: { tenantId: string }) {
           </div>
         </div>
 
-        {/* Business goal */}
         <div>
           <div className="text-xs text-slate-500 mb-0.5">Business goal</div>
           <div className="text-sm font-medium text-slate-900">
@@ -295,7 +301,6 @@ function OnboardingSection({ tenantId }: { tenantId: string }) {
           </div>
         </div>
 
-        {/* Marketing style */}
         <div>
           <div className="text-xs text-slate-500 mb-0.5">Marketing style</div>
           <div className="text-sm font-medium text-slate-900">
@@ -306,7 +311,6 @@ function OnboardingSection({ tenantId }: { tenantId: string }) {
           </div>
         </div>
 
-        {/* Shop connected + completed at */}
         <div className="pt-3 border-t border-slate-200 flex items-center justify-between text-xs">
           <div className="flex items-center gap-1.5 text-slate-600">
             {data.shopConnected
@@ -325,11 +329,211 @@ function OnboardingSection({ tenantId }: { tenantId: string }) {
   );
 }
 
+// ── Billing actions sectie (NIEUW) ───────────────────────────
+function BillingActionsSection({
+  tenantId, onRefresh,
+}: {
+  tenantId: string;
+  onRefresh: () => void;
+}) {
+  const [status, setStatus] = useState<BillingStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [acting, setActing] = useState<'pause' | 'cancel' | 'reactivate' | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<'cancel' | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await adminApi.get<BillingStatus>(`/admin/tenants/${tenantId}/billing-status`);
+      setStatus(res);
+    } catch (e: any) {
+      setError(e.message ?? 'Ophalen mislukt');
+    } finally {
+      setLoading(false);
+    }
+  }, [tenantId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleAction = async (action: 'pause' | 'cancel' | 'reactivate') => {
+    setActing(action);
+    setError(null);
+    try {
+      await adminApi.post(`/admin/tenants/${tenantId}/${action}`, {});
+      await load();
+      onRefresh();
+      setConfirm(null);
+    } catch (e: any) {
+      setError(e.message ?? 'Actie mislukt');
+    } finally {
+      setActing(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <CreditCard className="w-4 h-4 text-slate-500" />
+          <h3 className="text-sm font-semibold text-slate-900">Abonnement beheren</h3>
+        </div>
+        <div className="bg-slate-50 rounded-xl p-4 flex items-center justify-center">
+          <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!status) {
+    return (
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <CreditCard className="w-4 h-4 text-slate-500" />
+          <h3 className="text-sm font-semibold text-slate-900">Abonnement beheren</h3>
+        </div>
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-xs text-red-700">
+          {error ?? 'Geen data'}
+        </div>
+      </div>
+    );
+  }
+
+  // Status label
+  let statusLabel = '';
+  let statusColor = '';
+  if (status.tenantStatus === 'active') {
+    statusLabel = 'Actief';
+    statusColor = 'bg-emerald-100 text-emerald-700';
+  } else if (status.tenantStatus === 'suspended' && status.pausedAt) {
+    statusLabel = 'Gepauzeerd';
+    statusColor = 'bg-amber-100 text-amber-700';
+  } else if (status.tenantStatus === 'suspended') {
+    statusLabel = 'Opgeschort (legacy)';
+    statusColor = 'bg-slate-100 text-slate-500';
+  } else {
+    statusLabel = 'Geannuleerd';
+    statusColor = 'bg-red-50 text-red-400';
+  }
+
+  const pausedDate = status.pausedAt
+    ? new Date(status.pausedAt).toLocaleDateString('nl-NL', {
+        day: 'numeric', month: 'long', year: 'numeric',
+      })
+    : null;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <CreditCard className="w-4 h-4 text-slate-500" />
+          <h3 className="text-sm font-semibold text-slate-900">Abonnement beheren</h3>
+        </div>
+        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusColor}`}>
+          {statusLabel}
+        </span>
+      </div>
+
+      <div className="bg-slate-50 rounded-xl p-4 space-y-3">
+
+        {pausedDate && (
+          <div className="text-xs text-slate-600">
+            Gepauzeerd sinds {pausedDate}
+          </div>
+        )}
+
+        {!status.hasStripeSub && (
+          <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
+            Geen Stripe subscription gekoppeld. Pause / reactivate niet beschikbaar.
+          </div>
+        )}
+
+        {error && (
+          <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* Confirm cancel dialog */}
+        {confirm === 'cancel' ? (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 space-y-3">
+            <p className="text-xs text-red-700">
+              <strong>Permanent annuleren?</strong> De Stripe subscription wordt gecanceld.
+              Klant kan alleen terugkeren via een nieuwe checkout.
+            </p>
+            <div className="flex gap-2">
+              <button onClick={() => handleAction('cancel')}
+                disabled={acting !== null}
+                className="bg-red-500 hover:bg-red-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1 disabled:opacity-50"
+              >
+                {acting === 'cancel' && <Loader2 className="w-3 h-3 animate-spin" />}
+                <XCircle className="w-3 h-3" />
+                Ja, definitief annuleren
+              </button>
+              <button onClick={() => setConfirm(null)}
+                disabled={acting !== null}
+                className="text-slate-600 hover:text-slate-900 text-xs px-3 py-1.5"
+              >
+                Terug
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+
+            {status.canPause && (
+              <button onClick={() => handleAction('pause')}
+                disabled={acting !== null}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 hover:bg-amber-100 text-sm font-medium text-amber-800 transition-colors text-left disabled:opacity-50"
+              >
+                {acting === 'pause'
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : <Pause className="w-4 h-4" />
+                }
+                Pauzeren (geen incasso, omkeerbaar)
+              </button>
+            )}
+
+            {status.canReactivate && (
+              <button onClick={() => handleAction('reactivate')}
+                disabled={acting !== null}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-sm font-medium text-emerald-800 transition-colors text-left disabled:opacity-50"
+              >
+                {acting === 'reactivate'
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : <Play className="w-4 h-4" />
+                }
+                Heractiveren (incasso hervat volgende cycle)
+              </button>
+            )}
+
+            {status.canCancel && (
+              <button onClick={() => setConfirm('cancel')}
+                disabled={acting !== null}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-red-50 hover:bg-red-100 text-sm font-medium text-red-700 transition-colors text-left disabled:opacity-50"
+              >
+                <XCircle className="w-4 h-4" />
+                Definitief annuleren (Stripe sub. weg)
+              </button>
+            )}
+
+            {!status.canPause && !status.canReactivate && !status.canCancel && (
+              <p className="text-xs text-slate-500 italic">
+                Geen acties beschikbaar voor deze tenant.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Klant detail / beheer panel ───────────────────────────────
 function TenantPanel({
-  tenant,
-  onClose,
-  onRefresh,
+  tenant, onClose, onRefresh,
 }: {
   tenant: Tenant;
   onClose: () => void;
@@ -357,11 +561,6 @@ function TenantPanel({
       adminApi.post(`/admin/tenants/${tenant.id}/change-plan`, { planSlug: slug })
     );
 
-  const suspend = () =>
-    act('Account opschorten', () =>
-      adminApi.post(`/admin/tenants/${tenant.id}/suspend`, {})
-    );
-
   const resetCredits = () =>
     act('Credits resetten', () =>
       adminApi.post(`/admin/tenants/${tenant.id}/reset-credits`, {})
@@ -377,7 +576,6 @@ function TenantPanel({
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-end z-50">
       <div className="bg-white h-full w-full max-w-md overflow-y-auto shadow-2xl">
-        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-200">
           <div>
             <h2 className="font-bold text-slate-900">{tenant.name}</h2>
@@ -423,16 +621,18 @@ function TenantPanel({
             ))}
           </div>
 
-          {/* Onboarding sectie */}
+          {/* Onboarding */}
           <OnboardingSection tenantId={tenant.id} />
+
+          {/* Billing actions (NIEUW) */}
+          <BillingActionsSection tenantId={tenant.id} onRefresh={onRefresh} />
 
           {/* Plan wijzigen */}
           <div>
             <h3 className="text-sm font-semibold text-slate-900 mb-3">Plan wijzigen</h3>
             <div className="grid grid-cols-3 gap-2">
               {(['starter', 'growth', 'scale'] as const).map(slug => (
-                <button
-                  key={slug}
+                <button key={slug}
                   onClick={() => changePlan(slug)}
                   disabled={loading === 'Plan wijzigen' || tenant.plan_slug === slug}
                   className={`py-2 rounded-lg text-xs font-semibold transition-all capitalize ${
@@ -450,12 +650,11 @@ function TenantPanel({
             </div>
           </div>
 
-          {/* Acties */}
+          {/* Overige acties (zonder suspend, die zit nu in BillingActionsSection) */}
           <div>
-            <h3 className="text-sm font-semibold text-slate-900 mb-3">Klantenservice acties</h3>
+            <h3 className="text-sm font-semibold text-slate-900 mb-3">Overige acties</h3>
             <div className="space-y-2">
-              <button
-                onClick={impersonate}
+              <button onClick={impersonate}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-sm font-medium text-slate-700 transition-colors text-left"
               >
                 <Eye className="w-4 h-4 text-slate-500" />
@@ -463,31 +662,22 @@ function TenantPanel({
                 <ExternalLink className="w-3.5 h-3.5 ml-auto text-slate-400" />
               </button>
 
-              <button
-                onClick={resetCredits}
+              <button onClick={resetCredits}
                 disabled={loading === 'Credits resetten'}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-sm font-medium text-slate-700 transition-colors text-left disabled:opacity-50"
               >
                 <RotateCcw className="w-4 h-4 text-slate-500" />
                 {loading === 'Credits resetten' ? 'Bezig...' : 'AI credits deze maand resetten'}
               </button>
-
-              {tenant.status === 'active' && (
-                <button
-                  onClick={suspend}
-                  disabled={loading === 'Account opschorten'}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-red-50 hover:bg-red-100 text-sm font-medium text-red-700 transition-colors text-left disabled:opacity-50"
-                >
-                  <ShieldOff className="w-4 h-4" />
-                  {loading === 'Account opschorten' ? 'Bezig...' : 'Account opschorten'}
-                </button>
-              )}
             </div>
           </div>
 
           {/* Stripe link */}
           {tenant.stripe_customer_id && (
-            <a href={`https://dashboard.stripe.com/customers/${tenant.stripe_customer_id}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700 font-medium">
+            <a href={`https://dashboard.stripe.com/customers/${tenant.stripe_customer_id}`}
+              target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700 font-medium"
+            >
               <CreditCard className="w-4 h-4" />
               Bekijk in Stripe dashboard
               <ExternalLink className="w-3.5 h-3.5" />
@@ -530,7 +720,6 @@ export default function AdminDashboard() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Filter logic
   useEffect(() => {
     let result = tenants;
     if (search) {
@@ -551,7 +740,6 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-slate-50">
 
-      {/* Topbar */}
       <div className="bg-white border-b border-slate-200 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -566,15 +754,13 @@ export default function AdminDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Link
-              href="/admin/feature-flags"
+            <Link href="/admin/feature-flags"
               className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
             >
               <Flag className="w-4 h-4" />
               Feature flags
             </Link>
-            <button
-              onClick={loadData}
+            <button onClick={loadData}
               className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -586,42 +772,31 @@ export default function AdminDashboard() {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
 
-        {/* KPI rij */}
         {kpis && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <KPICard
-              title="Maandelijkse omzet"
+            <KPICard title="Maandelijkse omzet"
               value={`€${totalMRR.toLocaleString('nl-NL')}`}
-              trend={kpis.mrr_growth}
-              sub="vs vorige maand"
-              icon={TrendingUp}
-              color="bg-emerald-100 text-emerald-600"
+              trend={kpis.mrr_growth} sub="vs vorige maand"
+              icon={TrendingUp} color="bg-emerald-100 text-emerald-600"
             />
-            <KPICard
-              title="Actieve klanten"
+            <KPICard title="Actieve klanten"
               value={String(kpis.active_tenants)}
               sub={`${kpis.trialing_tenants} in trial`}
-              icon={Users}
-              color="bg-brand-100 text-brand-600"
+              icon={Users} color="bg-brand-100 text-brand-600"
             />
-            <KPICard
-              title="Nieuwe klanten (30d)"
+            <KPICard title="Nieuwe klanten (30d)"
               value={String(kpis.new_30d)}
               sub={`${kpis.trial_conversion}% trial→paid`}
-              icon={Activity}
-              color="bg-violet-100 text-violet-600"
+              icon={Activity} color="bg-violet-100 text-violet-600"
             />
-            <KPICard
-              title="Betalingsproblemen"
+            <KPICard title="Betalingsproblemen"
               value={String(kpis.past_due)}
               sub={`${kpis.churn_30d} opgezegd (30d)`}
-              icon={AlertCircle}
-              color="bg-amber-100 text-amber-600"
+              icon={AlertCircle} color="bg-amber-100 text-amber-600"
             />
           </div>
         )}
 
-        {/* MRR per plan */}
         {kpis && (
           <div className="bg-white rounded-2xl border border-slate-200 p-5 mb-8">
             <h3 className="text-sm font-semibold text-slate-900 mb-4">MRR per plan</h3>
@@ -640,8 +815,7 @@ export default function AdminDashboard() {
                       </span>
                     </div>
                     <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-brand-500 rounded-full transition-all"
+                      <div className="h-full bg-brand-500 rounded-full transition-all"
                         style={{ width: `${pct}%` }}
                       />
                     </div>
@@ -653,14 +827,12 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Tabs */}
         <div className="flex gap-1 bg-white rounded-xl border border-slate-200 p-1 w-fit mb-6">
           {([
             { id: 'tenants', label: 'Klanten' },
             { id: 'health',  label: 'Platform gezondheid' },
           ] as const).map(tab => (
-            <button
-              key={tab.id}
+            <button key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                 activeTab === tab.id
@@ -673,16 +845,13 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-        {/* Klantentabel */}
         {activeTab === 'tenants' && (
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
 
-            {/* Filter balk */}
             <div className="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center gap-3">
               <div className="relative flex-1 min-w-48">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="text"
+                <input type="text"
                   placeholder="Zoek op naam, e-mail of slug..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
@@ -690,9 +859,7 @@ export default function AdminDashboard() {
                 />
               </div>
 
-              <select
-                value={planFilter}
-                onChange={e => setPlanFilter(e.target.value)}
+              <select value={planFilter} onChange={e => setPlanFilter(e.target.value)}
                 className="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-brand-500"
               >
                 <option value="all">Alle plannen</option>
@@ -701,9 +868,7 @@ export default function AdminDashboard() {
                 <option value="scale">Scale</option>
               </select>
 
-              <select
-                value={statusFilter}
-                onChange={e => setStatusFilter(e.target.value)}
+              <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
                 className="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-brand-500"
               >
                 <option value="all">Alle statussen</option>
@@ -718,7 +883,6 @@ export default function AdminDashboard() {
               </span>
             </div>
 
-            {/* Tabel */}
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -745,8 +909,7 @@ export default function AdminDashboard() {
                       </td>
                     </tr>
                   ) : filtered.map(tenant => (
-                    <tr
-                      key={tenant.id}
+                    <tr key={tenant.id}
                       className="border-b border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer"
                       onClick={() => setSelectedTenant(tenant)}
                     >
@@ -778,8 +941,7 @@ export default function AdminDashboard() {
                         {new Date(tenant.created_at).toLocaleDateString('nl-NL')}
                       </td>
                       <td className="px-5 py-4">
-                        <button
-                          onClick={e => { e.stopPropagation(); setSelectedTenant(tenant); }}
+                        <button onClick={e => { e.stopPropagation(); setSelectedTenant(tenant); }}
                           className="p-1.5 hover:bg-slate-200 rounded-lg transition-colors"
                         >
                           <Settings className="w-4 h-4 text-slate-400" />
@@ -793,7 +955,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Platform gezondheid tab */}
         {activeTab === 'health' && (
           <div className="grid grid-cols-2 gap-4">
             {[
@@ -808,10 +969,8 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {/* Klant detail panel */}
       {selectedTenant && (
-        <TenantPanel
-          tenant={selectedTenant}
+        <TenantPanel tenant={selectedTenant}
           onClose={() => setSelectedTenant(null)}
           onRefresh={loadData}
         />
@@ -820,7 +979,6 @@ export default function AdminDashboard() {
   );
 }
 
-// ── Health card component ─────────────────────────────────────
 function HealthCard({ title, endpoint }: { title: string; endpoint: string }) {
   const [data,    setData]    = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(false);
