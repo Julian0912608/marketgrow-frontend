@@ -164,29 +164,27 @@ export default function OnboardingPage() {
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 md:p-8 shadow-sm">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8">
           {state.step === 1 && (
-            <Step1Country
-              initialCountry={state.countryCode}
-              initialSellsTo={state.sellsToCountries}
+            <Step1Country initial={{
+                countryCode:      state.countryCode,
+                sellsToCountries: state.sellsToCountries,
+              }}
               onCompleted={() => advanceTo(2)}
             />
           )}
           {state.step === 2 && (
-            <Step2Goal
-              initialGoal={state.businessGoal}
+            <Step2Goal initial={state.businessGoal}
               onCompleted={() => advanceTo(3)}
             />
           )}
           {state.step === 3 && (
-            <Step3Marketing
-              initialStyle={state.marketingStyle}
+            <Step3Marketing initial={state.marketingStyle}
               onCompleted={() => advanceTo(4)}
             />
           )}
-          {state.step === 4 && state.countryCode && (
-            <Step4Store
-              countryCode={state.countryCode}
+          {state.step === 4 && (
+            <Step4Store countryCode={state.countryCode!}
               onCompleted={handleComplete}
             />
           )}
