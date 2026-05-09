@@ -7,10 +7,15 @@
 // Country-aware: Bol.com card alleen voor NL/BE via integration_bol flag.
 // Refetch flags on mount: country is mogelijk net in step 1 gezet.
 //
+// V0 Gap 3 update: onCompleted krijgt nu shopConnected: boolean door
+// zodat de parent page kan beslissen tussen /dashboard/setup (Day Zero
+// polling) of /dashboard (no shop, geen Day Zero job).
+//
 // Acties:
-//   - Shopify: install POST -> complete -> redirect naar Shopify OAuth.
-//   - Bol.com: inline form -> connect POST -> complete -> dashboard.
-//   - Skip:    complete met shopConnected=false -> dashboard.
+//   - Shopify: install POST -> complete -> Shopify OAuth redirect.
+//              (geen onCompleted call: window.location.href neemt over)
+//   - Bol.com: inline form -> connect POST -> complete -> onCompleted(true).
+//   - Skip:    complete met shopConnected=false -> onCompleted(false).
 // ============================================================
 
 import { useState, useEffect } from 'react';
@@ -20,7 +25,7 @@ import { useFeatureFlags } from '@/lib/featureFlags';
 
 interface Step4StoreProps {
   countryCode: string;
-  onCompleted: () => void;
+  onCompleted: (shopConnected: boolean) => void;
 }
 
 type ActionState = 'idle' | 'shopify' | 'bol-form' | 'bol-help' | 'skip';
@@ -34,7 +39,6 @@ export function Step4Store({ countryCode, onCompleted }: Step4StoreProps) {
   const [bolApiSecret, setBolApiSecret] = useState('');
   const [bolSubmitting, setBolSubmitting] = useState(false);
 
-  // Country is mogelijk net in step 1 gezet, provider kan oude flags hebben
   useEffect(() => {
     refetch();
   }, [refetch]);
@@ -49,7 +53,9 @@ export function Step4Store({ countryCode, onCompleted }: Step4StoreProps) {
     setError('');
     try {
       const res = await api.post('/integrations/shopify/install', { shopDomain: domain });
-      // Markeer wizard pas als compleet zodra install URL succesvol is opgehaald
+      // Markeer wizard als compleet voor Shopify OAuth start. Day Zero
+      // wordt na OAuth callback getriggered (achter de schermen op backend).
+      // De gebruiker komt na OAuth terug op zijn eigen Shopify-flow landing.
       await api.post('/onboarding/complete', { shopConnected: true });
       window.location.href = res.data.installUrl;
     } catch (e: any) {
@@ -72,7 +78,7 @@ export function Step4Store({ countryCode, onCompleted }: Step4StoreProps) {
         apiSecret:    bolApiSecret.trim(),
       });
       await api.post('/onboarding/complete', { shopConnected: true });
-      onCompleted();
+      onCompleted(true);
     } catch (e: any) {
       setError(e?.response?.data?.error ?? e?.response?.data?.message ?? 'Could not connect Bol.com.');
       setBolSubmitting(false);
@@ -84,7 +90,7 @@ export function Step4Store({ countryCode, onCompleted }: Step4StoreProps) {
     setError('');
     try {
       await api.post('/onboarding/complete', { shopConnected: false });
-      onCompleted();
+      onCompleted(false);
     } catch (e: any) {
       setError(e?.response?.data?.message ?? 'Could not finish setup.');
       setAction('idle');
@@ -117,145 +123,121 @@ export function Step4Store({ countryCode, onCompleted }: Step4StoreProps) {
         </p>
 
         <div>
-          <label className="block text-sm font-semibold text-slate-900 mb-1.5">Client ID</label>
-          <input type="text"
+          <label className="text-xs font-semibold text-slate-700 uppercase tracking-wide block mb-1.5">
+            Client ID
+          </label>
+          <input
+            type="text"
             value={bolApiKey}
             onChange={e => setBolApiKey(e.target.value)}
-            placeholder="abc12345-..."
-            className="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            placeholder="Your Bol.com client ID"
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500 outline-none"
+            disabled={bolSubmitting}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-slate-900 mb-1.5">Client Secret</label>
-          <input type="password"
+          <label className="text-xs font-semibold text-slate-700 uppercase tracking-wide block mb-1.5">
+            Client Secret
+          </label>
+          <input
+            type="password"
             value={bolApiSecret}
             onChange={e => setBolApiSecret(e.target.value)}
-            placeholder="••••••••••••••••"
-            className="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            placeholder="Your Bol.com client secret"
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500 outline-none"
+            disabled={bolSubmitting}
           />
         </div>
 
         {error && (
-          <div className="bg-rose-50 border border-rose-200 text-rose-700 text-sm px-4 py-3 rounded-lg">
-            {error}
+          <div className="flex items-start gap-2 p-3 bg-rose-50 border border-rose-200 rounded-lg">
+            <AlertCircle className="w-4 h-4 text-rose-500 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-rose-700">{error}</p>
           </div>
         )}
 
-        <button onClick={handleBolSubmit}
-          disabled={bolSubmitting}
-          className="w-full flex items-center justify-center gap-2 py-3 px-6 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-semibold rounded-xl text-sm"
+        <button
+          onClick={handleBolSubmit}
+          disabled={bolSubmitting || !bolApiKey.trim() || !bolApiSecret.trim()}
+          className="w-full bg-brand-600 hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2"
         >
-          {bolSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Connect Bol.com'}
+          {bolSubmitting ? (
+            <><Loader2 className="w-4 h-4 animate-spin" /> Connecting...</>
+          ) : (
+            <>Connect <ArrowRight className="w-4 h-4" /></>
+          )}
         </button>
       </div>
     );
   }
 
-  // Bol help view
-  if (action === 'bol-help') {
-    return (
-      <div className="space-y-5">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-slate-900">Become a Bol.com seller</h3>
-          <button onClick={() => setAction('idle')}
-            className="text-slate-400 hover:text-slate-600"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="space-y-4 text-sm text-slate-600">
-          <p>
-            Bol.com is a marketplace for NL and BE. To sell on Bol you need a registered seller account, which requires a KvK number and a Dutch or Belgian VAT registration.
-          </p>
-          <ol className="list-decimal pl-5 space-y-2">
-            <li>Register your business at the Chamber of Commerce (KvK).</li>
-            <li>Apply as a seller at <span className="font-medium">verkopen.bol.com</span>.</li>
-            <li>Wait for approval, usually 1 to 3 working days.</li>
-            <li>Once approved, generate API credentials in the seller dashboard.</li>
-          </ol>
-        </div>
-
-        <a href="https://verkopen.bol.com/nl/registreer/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 text-brand-600 text-sm font-semibold hover:underline"
-        >
-          Open Bol seller registration
-          <ExternalLink className="w-3.5 h-3.5" />
-        </a>
-
-        <button onClick={() => setAction('idle')}
-          className="w-full py-3 px-6 border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold rounded-xl text-sm"
-        >
-          Back
-        </button>
-      </div>
-    );
-  }
-
-  // Default cards view
+  // Idle / store choice view
   return (
-    <div className="space-y-5">
-      <p className="text-slate-600 text-sm">
-        Connect your first store so the AI can read your sales history and write your baseline marketing plan.
+    <div className="space-y-4">
+      <p className="text-sm text-slate-600 mb-2">
+        Connect your sales channel so we can pull in your data and build your AI baseline.
       </p>
 
-      <button onClick={handleShopify}
+      {/* Shopify card */}
+      <button
+        onClick={handleShopify}
         disabled={action !== 'idle'}
-        className="w-full text-left flex items-center gap-4 p-5 rounded-xl border-2 border-slate-200 hover:border-brand-600 hover:bg-brand-50 transition-all disabled:opacity-50"
+        className="w-full flex items-center gap-4 p-4 border border-slate-200 rounded-xl hover:border-brand-300 hover:bg-brand-50/30 transition-all text-left disabled:opacity-50"
       >
-        <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0">
-          <Store className="w-6 h-6" />
+        <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+          <Store className="w-5 h-5 text-emerald-700" />
         </div>
         <div className="flex-1">
-          <div className="font-semibold text-slate-900 text-sm mb-1">Shopify</div>
-          <div className="text-xs text-slate-500">OAuth connection. Recommended for most stores.</div>
+          <p className="font-semibold text-slate-900">Shopify</p>
+          <p className="text-xs text-slate-500">Recommended for most stores. Connect via OAuth.</p>
         </div>
-        {action === 'shopify'
-          ? <Loader2 className="w-4 h-4 animate-spin text-brand-600" />
-          : <ArrowRight className="w-4 h-4 text-slate-400" />}
+        {action === 'shopify' ? (
+          <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+        ) : (
+          <ExternalLink className="w-4 h-4 text-slate-400" />
+        )}
       </button>
 
+      {/* Bol card (only NL/BE) */}
       {bolEnabled && (
-        <div className="space-y-2">
-          <button onClick={() => { setAction('bol-form'); setError(''); }}
-            disabled={action !== 'idle'}
-            className="w-full text-left flex items-center gap-4 p-5 rounded-xl border-2 border-slate-200 hover:border-brand-600 hover:bg-brand-50 transition-all disabled:opacity-50"
-          >
-            <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
-              <Store className="w-6 h-6" />
-            </div>
-            <div className="flex-1">
-              <div className="font-semibold text-slate-900 text-sm mb-1">Bol.com</div>
-              <div className="text-xs text-slate-500">Marketplace seller account with API credentials.</div>
-            </div>
-            <ArrowRight className="w-4 h-4 text-slate-400" />
-          </button>
-          <button onClick={() => setAction('bol-help')}
-            className="text-xs text-slate-500 hover:text-slate-700 ml-1"
-          >
-            Don't have a Bol seller account yet? Show me how
-          </button>
-        </div>
+        <button
+          onClick={() => { setAction('bol-form'); setError(''); }}
+          disabled={action !== 'idle'}
+          className="w-full flex items-center gap-4 p-4 border border-slate-200 rounded-xl hover:border-brand-300 hover:bg-brand-50/30 transition-all text-left disabled:opacity-50"
+        >
+          <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+            <Store className="w-5 h-5 text-blue-700" />
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-slate-900">Bol.com</p>
+            <p className="text-xs text-slate-500">Connect with your seller API credentials.</p>
+          </div>
+          <ArrowRight className="w-4 h-4 text-slate-400" />
+        </button>
       )}
 
       {error && (
-        <div className="bg-rose-50 border border-rose-200 text-rose-700 text-sm px-4 py-3 rounded-lg flex items-start gap-2">
-          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-          <span>{error}</span>
+        <div className="flex items-start gap-2 p-3 bg-rose-50 border border-rose-200 rounded-lg">
+          <AlertCircle className="w-4 h-4 text-rose-500 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-rose-700">{error}</p>
         </div>
       )}
 
-      <div className="pt-3 border-t border-slate-100">
-        <button onClick={handleSkip}
+      <div className="pt-2 border-t border-slate-100">
+        <button
+          onClick={handleSkip}
           disabled={action !== 'idle'}
-          className="w-full text-center text-sm text-slate-500 hover:text-slate-700 font-medium disabled:opacity-50"
+          className="text-sm text-slate-500 hover:text-slate-700 font-medium disabled:opacity-50"
         >
-          {action === 'skip'
-            ? <Loader2 className="w-4 h-4 animate-spin mx-auto" />
-            : `I'll connect later`}
+          {action === 'skip' ? (
+            <span className="inline-flex items-center gap-2">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Finishing up...
+            </span>
+          ) : (
+            "I'll connect a store later"
+          )}
         </button>
       </div>
     </div>
