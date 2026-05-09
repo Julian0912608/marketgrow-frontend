@@ -2,8 +2,11 @@
 
 // ============================================================
 // Admin Monitoring Dashboard — app/admin/page.tsx
-// Deploy: aparte route /admin in de bestaande Next.js app
-// Beveiliging: middleware.ts checkt ADMIN_SECRET cookie/header
+//
+// Auth: gaat via /api/admin-proxy/* (Vercel server route).
+// De proxy leest de httpOnly admin_session cookie en forwardt
+// hem als x-admin-session header naar Railway. Browser raakt
+// het token nooit aan.
 //
 // Vereiste env vars (Vercel):
 //   ADMIN_SECRET=jouw-geheime-wachtwoord
@@ -106,34 +109,29 @@ const ONBOARDING_STATUS_LABELS: Record<string, string> = {
   in_progress:  'Bezig',
 };
 
-// ── API helper — praat met je Railway backend via admin endpoints ──
+// ── API helper — alle calls gaan via /api/admin-proxy/* ──────
+// De Vercel route forwardt de admin_session cookie als
+// x-admin-session header naar Railway.
 const adminApi = {
-  headers(): Record<string, string> {
-    const token = typeof document !== 'undefined'
-      ? document.cookie
-          .split('; ')
-          .find(r => r.startsWith('admin_token='))
-          ?.split('=')[1] || ''
-      : '';
-    return {
-      'Content-Type':  'application/json',
-      'x-admin-token': token,
-    };
-  },
-
-  base: (process.env.NEXT_PUBLIC_API_URL || 'https://marketgrowth-production.up.railway.app') + '/api',
+  base: '/api/admin-proxy',
 
   async get<T>(path: string): Promise<T> {
-    const res = await fetch(this.base + path, { headers: this.headers() });
+    const res = await fetch(this.base + path, {
+      method:      'GET',
+      cache:       'no-store',
+      credentials: 'include',
+    });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   },
 
   async post<T>(path: string, body: unknown): Promise<T> {
     const res = await fetch(this.base + path, {
-      method:  'POST',
-      headers: this.headers(),
-      body:    JSON.stringify(body),
+      method:      'POST',
+      cache:       'no-store',
+      credentials: 'include',
+      headers:     { 'Content-Type': 'application/json' },
+      body:        JSON.stringify(body),
     });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
