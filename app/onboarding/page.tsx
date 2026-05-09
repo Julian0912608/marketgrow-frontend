@@ -4,7 +4,8 @@
 // app/onboarding/page.tsx
 //
 // V0 Gap 2: 4-stappen onboarding wizard.
-// Vervangt de oude plan/payment/shop flow volledig.
+// V0 Gap 3 update: na complete met shopConnected=true redirecten
+// we naar /dashboard/setup (Day Zero polling page) ipv /dashboard.
 //
 // Flow:
 //   - Mount: GET /onboarding/state. Already completed/skipped: redirect.
@@ -13,8 +14,10 @@
 //   - Step 3 (skipbaar all-or-nothing): marketing style.
 //   - Step 4 (skipbaar): connect first store.
 //
+// handleComplete redirect:
+//   - shopConnected=true  -> /dashboard/setup (Day Zero polling)
+//   - shopConnected=false -> /dashboard
 // Skip vanaf step 2 markeert status='skipped' en gaat naar /dashboard.
-// User kan later in Settings de open velden invullen.
 // ============================================================
 
 import { useState, useEffect } from 'react';
@@ -87,8 +90,15 @@ export default function OnboardingPage() {
     }
   };
 
-  const handleComplete = () => {
-    router.replace('/dashboard');
+  // Aangeroepen door Step4Store na succesvolle complete call.
+  // shopConnected=true: Day Zero job draait, route door naar polling page.
+  // shopConnected=false: gebruiker had geen store, gewoon dashboard.
+  const handleComplete = (shopConnected: boolean) => {
+    if (shopConnected) {
+      router.replace('/dashboard/setup');
+    } else {
+      router.replace('/dashboard');
+    }
   };
 
   if (loading) {
@@ -154,27 +164,29 @@ export default function OnboardingPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8">
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 md:p-8 shadow-sm">
           {state.step === 1 && (
-            <Step1Country initial={{
-                countryCode:      state.countryCode,
-                sellsToCountries: state.sellsToCountries,
-              }}
+            <Step1Country
+              initialCountry={state.countryCode}
+              initialSellsTo={state.sellsToCountries}
               onCompleted={() => advanceTo(2)}
             />
           )}
           {state.step === 2 && (
-            <Step2Goal initial={state.businessGoal}
+            <Step2Goal
+              initialGoal={state.businessGoal}
               onCompleted={() => advanceTo(3)}
             />
           )}
           {state.step === 3 && (
-            <Step3Marketing initial={state.marketingStyle}
+            <Step3Marketing
+              initialStyle={state.marketingStyle}
               onCompleted={() => advanceTo(4)}
             />
           )}
-          {state.step === 4 && (
-            <Step4Store countryCode={state.countryCode!}
+          {state.step === 4 && state.countryCode && (
+            <Step4Store
+              countryCode={state.countryCode}
               onCompleted={handleComplete}
             />
           )}
