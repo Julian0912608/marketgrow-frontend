@@ -64,14 +64,18 @@ interface OnboardingDetails {
 }
 
 interface BillingStatus {
-  tenantStatus:       'active' | 'suspended' | 'cancelled';
-  pausedAt:           string | null;
-  subscriptionStatus: 'active' | 'trialing' | 'past_due' | 'cancelled' | null;
-  hasStripeSub:       boolean;
-  hasStripeCustomer:  boolean;
-  canPause:           boolean;
-  canCancel:          boolean;
-  canReactivate:      boolean;
+  tenantStatus:          'active' | 'suspended' | 'cancelled';
+  pausedAt:              string | null;
+  subscriptionStatus:    'active' | 'trialing' | 'past_due' | 'cancelled' | null;
+  hasStripeSub:          boolean;
+  hasStripeCustomer:     boolean;
+  stripeStatus:          string | null;
+  stripeMissing:         boolean;
+  stripePauseCollection: boolean;
+  driftDetected:         boolean;
+  canPause:              boolean;
+  canCancel:             boolean;
+  canReactivate:         boolean;
 }
 
 // ── Display labels ────────────────────────────────────────────
