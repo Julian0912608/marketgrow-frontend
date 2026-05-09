@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
-  User, CreditCard, Bell, Shield,
+  User, CreditCard, Bell, Shield, Briefcase,
   Check, Loader2, X, CheckCircle,
   Download, Trash2, AlertTriangle,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
-import { useRouter } from 'next/navigation';
+import { BusinessProfileTab } from '@/components/settings/BusinessProfileTab';
 
 interface BillingOverview {
   planSlug:          string;
@@ -43,17 +44,21 @@ const PLANS = [
 
 const TABS = [
   { id: 'profile',       label: 'Profile',       icon: User },
-  { id: 'billing',       label: 'Billing',        icon: CreditCard },
-  { id: 'security',      label: 'Security',       icon: Shield },
-  { id: 'notifications', label: 'Notifications',  icon: Bell },
+  { id: 'business',      label: 'Business',      icon: Briefcase },
+  { id: 'billing',       label: 'Billing',       icon: CreditCard },
+  { id: 'security',      label: 'Security',      icon: Shield },
+  { id: 'notifications', label: 'Notifications', icon: Bell },
 ];
 
 const card  = 'bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6';
 const input = 'w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-brand-500 transition-colors';
 
-export default function SettingsPage() {
+// Inner component zodat we useSearchParams kunnen gebruiken zonder
+// Suspense boundary issues op build
+function SettingsPageInner() {
   const { user, updateUser, clearAuth } = useAuthStore();
-  const router = useRouter();
+  const router       = useRouter();
+  const searchParams = useSearchParams();
 
   const [activeTab,         setActiveTab]         = useState('profile');
   const [billing,           setBilling]           = useState<BillingOverview | null>(null);
@@ -75,6 +80,15 @@ export default function SettingsPage() {
   const [newPw,     setNewPw]     = useState('');
   const [confirmPw, setConfirmPw] = useState('');
   const [pwLoading, setPwLoading] = useState(false);
+
+  // Pak query param ?tab=xxx en open die tab. Werkt ook als de
+  // gebruiker via de StartSetupCard linkt naar /settings?tab=business.
+  useEffect(() => {
+    const tab = searchParams?.get('tab');
+    if (tab && TABS.some(t => t.id === tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   const showToast = (type: 'success' | 'error', msg: string) => {
     setToast({ type, msg });
@@ -148,7 +162,6 @@ export default function SettingsPage() {
   const handleCancel = async () => {
     setCancelLoading(true);
     try {
-      // Redirect naar Stripe portal voor cancellation
       const res = await api.post('/billing/portal');
       window.location.href = res.data.url;
     } catch (e: any) {
@@ -196,12 +209,11 @@ export default function SettingsPage() {
         <p className="text-slate-400 text-sm">Manage your account and subscription</p>
       </div>
 
-      <div className="flex gap-1 mb-8 bg-slate-800/50 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 mb-8 bg-slate-800/50 rounded-xl p-1 w-fit overflow-x-auto">
         {TABS.map(tab => (
-          <button
-            key={tab.id}
+          <button key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
               activeTab === tab.id
                 ? 'bg-slate-700 text-white'
                 : 'text-slate-400 hover:text-white'
@@ -232,8 +244,7 @@ export default function SettingsPage() {
               <label className="block text-xs font-medium text-slate-400 mb-1.5">Email</label>
               <input value={user?.email ?? ''} disabled className={`${input} opacity-50 cursor-not-allowed`} />
             </div>
-            <button
-              onClick={handleProfileSave}
+            <button onClick={handleProfileSave}
               disabled={profileLoading}
               className="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
             >
@@ -242,6 +253,11 @@ export default function SettingsPage() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Business tab */}
+      {activeTab === 'business' && (
+        <BusinessProfileTab showToast={showToast} />
       )}
 
       {/* Billing tab */}
@@ -279,8 +295,7 @@ export default function SettingsPage() {
               )}
 
               {!isCancelled && (
-                <button
-                  onClick={() => setShowCancelConfirm(true)}
+                <button onClick={() => setShowCancelConfirm(true)}
                   className="text-xs text-slate-500 hover:text-rose-400 transition-colors"
                 >
                   Cancel subscription
@@ -293,16 +308,14 @@ export default function SettingsPage() {
                     You'll be redirected to the billing portal to cancel. You keep access until the end of your current period.
                   </p>
                   <div className="flex gap-2">
-                    <button
-                      onClick={handleCancel}
+                    <button onClick={handleCancel}
                       disabled={cancelLoading}
                       className="bg-rose-500 hover:bg-rose-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1"
                     >
                       {cancelLoading && <Loader2 className="w-3 h-3 animate-spin" />}
                       Go to billing portal
                     </button>
-                    <button
-                      onClick={() => setShowCancelConfirm(false)}
+                    <button onClick={() => setShowCancelConfirm(false)}
                       className="text-slate-400 hover:text-white text-xs px-3 py-1.5"
                     >
                       Keep subscription
@@ -330,7 +343,8 @@ export default function SettingsPage() {
                           </span>
                           {inv.downloadUrl && (
                             <a href={inv.downloadUrl} target="_blank" rel="noopener noreferrer"
-                              className="w-7 h-7 rounded-lg bg-slate-700/50 hover:bg-slate-700 flex items-center justify-center transition-colors">
+                              className="w-7 h-7 rounded-lg bg-slate-700/50 hover:bg-slate-700 flex items-center justify-center transition-colors"
+                            >
                               <Download className="w-3.5 h-3.5 text-slate-400" />
                             </a>
                           )}
@@ -352,8 +366,7 @@ export default function SettingsPage() {
               {PLANS.map(plan => {
                 const isCurrent = currentPlan === plan.slug;
                 return (
-                  <div
-                    key={plan.slug}
+                  <div key={plan.slug}
                     className={`${card} relative ${(plan as any).popular ? 'border-brand-500/50' : ''}`}
                   >
                     {(plan as any).popular && (
@@ -376,8 +389,7 @@ export default function SettingsPage() {
                         </li>
                       ))}
                     </ul>
-                    <button
-                      onClick={() => { if (!isCurrent) handleUpgrade(plan.slug); }}
+                    <button onClick={() => { if (!isCurrent) handleUpgrade(plan.slug); }}
                       disabled={isCurrent || upgradeLoading !== null}
                       className={`w-full py-2 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
                         isCurrent
@@ -414,8 +426,7 @@ export default function SettingsPage() {
                 <label className="block text-xs font-medium text-slate-400 mb-1.5">Confirm new password</label>
                 <input type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} className={input} />
               </div>
-              <button
-                onClick={handlePasswordChange}
+              <button onClick={handlePasswordChange}
                 disabled={pwLoading || !currentPw || !newPw || !confirmPw}
                 className="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
               >
@@ -440,8 +451,7 @@ export default function SettingsPage() {
             </div>
 
             {!showDeleteConfirm ? (
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
+              <button onClick={() => setShowDeleteConfirm(true)}
                 className="text-xs text-rose-400 hover:text-rose-300 border border-rose-500/30 hover:border-rose-500/50 px-3 py-1.5 rounded-lg transition-colors"
               >
                 Delete my account
@@ -452,8 +462,7 @@ export default function SettingsPage() {
                   Are you absolutely sure? All your data, integrations and history will be permanently deleted.
                 </p>
                 <div className="flex gap-2">
-                  <button
-                    onClick={handleDeleteAccount}
+                  <button onClick={handleDeleteAccount}
                     disabled={deleteLoading}
                     className="bg-rose-500 hover:bg-rose-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1"
                   >
@@ -461,8 +470,7 @@ export default function SettingsPage() {
                     <Trash2 className="w-3 h-3" />
                     Yes, delete everything
                   </button>
-                  <button
-                    onClick={() => setShowDeleteConfirm(false)}
+                  <button onClick={() => setShowDeleteConfirm(false)}
                     className="text-slate-400 hover:text-white text-xs px-3 py-1.5"
                   >
                     Cancel
@@ -502,5 +510,17 @@ export default function SettingsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={
+      <div className="p-6 max-w-4xl mx-auto flex items-center justify-center h-64">
+        <Loader2 className="w-5 h-5 animate-spin text-slate-500" />
+      </div>
+    }>
+      <SettingsPageInner />
+    </Suspense>
   );
 }
