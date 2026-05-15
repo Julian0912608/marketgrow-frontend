@@ -8,33 +8,41 @@
 // handoff token bewaard. Op deze pagina koppelt de gebruiker
 // (of een nieuw account) de shop aan zijn MarketGrow tenant.
 //
-// Suspense wrapper is verplicht in Next.js App Router omdat
-// useSearchParams() anders de static page generation breekt
-// tijdens build (next.js prerender error). Zonder Suspense
-// faalt 'npm run build' op Vercel.
+// FIX 15-mei (3): gebruikt useAuthStore.isAuth in plaats van
+// raw sessionStorage check. Reden: na login update de Zustand
+// store maar sessionStorage zit op een andere timing. De store
+// is de single source of truth voor auth status.
 //
 // Flow:
 //   - Mount: lees handoff + shop uit URL, sla op in localStorage
-//   - GET /shopify/install/preview voor shop info (niet-consumerend)
-//   - Check of de gebruiker is ingelogd
+//   - GET /shopify/install/preview (raw axios) voor shop info
+//   - Check Zustand useAuthStore.isAuth
 //     - Ja: toon Connect knop -> POST /shopify/install/finalize
-//     - Nee: toon sign-in / sign-up links (handoff blijft in
-//       localStorage tot na auth)
-//   - Bij success: redirect naar /onboarding (zodat de wizard
-//     stappen 1-3 doet en de Day Zero pipeline kan starten)
+//     - Nee: toon sign-in / sign-up links met returnTo query
+//   - Bij success: redirect naar /onboarding of /dashboard
 // ============================================================
 
 import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import axios from 'axios';
 import { Store, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { api } from '@/lib/api';
+import { useAuthStore } from '@/lib/store';
 
 const HANDOFF_STORAGE_KEY = 'shopify_install_handoff';
 
 interface PreviewResponse {
-  shop:     string;
-  shopName: string | null;
+  shop:       string;
+  shopName:   string | null;
+  existsInDb: boolean;
+}
+
+interface FinalizeResponse {
+  success:       true;
+  outcome:       'connected' | 'relinked' | 'already_yours';
+  integrationId: string;
+  shop:          string;
 }
 
 // ── Outer page: Suspense wrapper ─────────────────────────────
@@ -58,15 +66,16 @@ function LoadingScreen() {
 function ShopifyConnectInner() {
   const router       = useRouter();
   const searchParams = useSearchParams();
+  const isAuth       = useAuthStore(s => s.isAuth);
 
   const [handoff, setHandoff]   = useState<string | null>(null);
   const [shop, setShop]         = useState<string | null>(null);
   const [shopName, setShopName] = useState<string | null>(null);
+  const [existsInDb, setExistsInDb] = useState(false);
 
   const [loading, setLoading]       = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]           = useState<string | null>(null);
-  const [isAuthed, setIsAuthed]     = useState(false);
 
   // ── Mount: lees handoff uit URL of localStorage ──────────
   useEffect(() => {
@@ -99,7 +108,6 @@ function ShopifyConnectInner() {
             shopName: string | null;
             savedAt:  number;
           };
-          // 30 minuten geldigheid client-side. Server heeft sowieso 15.
           if (Date.now() - parsed.savedAt < 30 * 60 * 1000) {
             activeHandoff = parsed.handoff;
             activeShop    = parsed.shop;
@@ -119,26 +127,25 @@ function ShopifyConnectInner() {
     setShop(activeShop);
     setShopName(activeName);
 
-    // Check auth status via een lichtgewicht endpoint. Als die
-    // niet bestaat valt de catch op token-check terug.
-    const accessToken = typeof window !== 'undefined'
-      ? localStorage.getItem('accessToken')
-      : null;
-    setIsAuthed(!!accessToken);
+    // Verifieer dat de handoff nog leeft op de server. KRITIEK:
+    // raw axios, GEEN api client, anders schopt de 401 interceptor
+    // ons naar /login zelfs als deze call slaagt.
+    const apiBase = process.env.NEXT_PUBLIC_API_URL
+      || 'https://marketgrowth-production.up.railway.app';
 
-    // Verifieer dat de handoff nog leeft op de server.
     (async () => {
       try {
-        const res = await api.get<PreviewResponse>('/shopify/install/preview', {
-          params: { handoff: activeHandoff },
-        });
+        const res = await axios.get<PreviewResponse>(
+          `${apiBase}/api/shopify/install/preview`,
+          { params: { handoff: activeHandoff } }
+        );
         if (res.data.shopName) setShopName(res.data.shopName);
+        setExistsInDb(res.data.existsInDb);
         setError(null);
       } catch (e: any) {
         const msg = e?.response?.data?.error
           ?? 'Could not load Shopify install. The link may have expired.';
         setError(msg);
-        // Cleanup stale handoff.
         try { localStorage.removeItem(HANDOFF_STORAGE_KEY); } catch { /* */ }
       } finally {
         setLoading(false);
@@ -152,17 +159,26 @@ function ShopifyConnectInner() {
     setSubmitting(true);
     setError(null);
     try {
-      await api.post('/shopify/install/finalize', { handoff });
-      // Cleanup: handoff is geconsumeerd.
+      const res = await api.post<FinalizeResponse>(
+        '/shopify/install/finalize',
+        { handoff }
+      );
       try { localStorage.removeItem(HANDOFF_STORAGE_KEY); } catch { /* */ }
-      // Stuur naar onboarding. Wizard detecteert dat shop al
-      // gekoppeld is en kan Day Zero starten na step 1-3.
-      router.replace('/onboarding');
+
+      // Bij 'connected' (nieuwe koppeling): start de onboarding
+      // wizard. Bij 'relinked' of 'already_yours': dashboard.
+      if (res.data.outcome === 'connected') {
+        router.replace('/onboarding');
+      } else {
+        router.replace('/dashboard/integrations?reconnected=shopify');
+      }
     } catch (e: any) {
       const status = e?.response?.status;
       if (status === 401) {
-        setIsAuthed(false);
         setError('Please sign in to connect your Shopify store.');
+      } else if (status === 409) {
+        setError(e?.response?.data?.error
+          ?? 'This store is already linked to another MarketGrow account.');
       } else {
         setError(e?.response?.data?.error
           ?? 'Could not connect your Shopify store. Please try again.');
@@ -175,6 +191,10 @@ function ShopifyConnectInner() {
   if (loading) {
     return <LoadingScreen />;
   }
+
+  // Return URL voor sign-in / sign-up zodat we na auth terug
+  // landen op deze page mét handoff in localStorage.
+  const returnTo = encodeURIComponent('/shopify/connect');
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-12">
@@ -206,10 +226,15 @@ function ShopifyConnectInner() {
             {shopName && (
               <div className="text-xs text-slate-500 mt-0.5">{shop}</div>
             )}
+            {existsInDb && !error && !isAuth && (
+              <div className="text-xs text-amber-700 mt-2">
+                This store is already linked to a MarketGrow account. Sign in to re-link.
+              </div>
+            )}
           </div>
         )}
 
-        {!error && isAuthed && (
+        {!error && isAuth && (
           <>
             <p className="text-sm text-slate-600 mb-6">
               Connect this Shopify store to your MarketGrow account. We will start syncing your orders and products right away.
@@ -234,27 +259,27 @@ function ShopifyConnectInner() {
           </>
         )}
 
-        {!error && !isAuthed && (
+        {!error && !isAuth && (
           <>
             <p className="text-sm text-slate-600 mb-6">
               Sign in to your MarketGrow account, or create a new one, to finish connecting this store. We will hold your install for 15 minutes.
             </p>
             <div className="space-y-3">
               <Link
-                href="/register"
+                href={`/register?returnTo=${returnTo}`}
                 className="w-full inline-flex items-center justify-center px-4 py-3 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition"
               >
                 Create MarketGrow account
               </Link>
               <Link
-                href="/login"
+                href={`/login?returnTo=${returnTo}`}
                 className="w-full inline-flex items-center justify-center px-4 py-3 rounded-lg border border-slate-300 bg-white text-slate-900 font-medium hover:bg-slate-50 transition"
               >
                 Sign in
               </Link>
             </div>
             <p className="text-xs text-slate-500 mt-4 text-center">
-              After signing in, return to this page to finish.
+              We will bring you back here automatically.
             </p>
           </>
         )}
