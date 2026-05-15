@@ -1,58 +1,45 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
 :root {
   --font-geist-sans: 'DM Sans', system-ui, sans-serif;
   --font-cabinet: 'Bricolage Grotesque', system-ui, sans-serif;
   --font-geist-mono: 'Fira Code', monospace;
 }
-
 @layer base {
   * { box-sizing: border-box; }
-
   html {
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-
   body {
     font-family: var(--font-geist-sans);
     color: #0f172a;
     background: #ffffff;
   }
-
   ::selection {
     background: #c7d2fe;
     color: #312e81;
   }
 }
-
 @layer utilities {
   .text-balance { text-wrap: balance; }
-
   .animate-delay-100 { animation-delay: 100ms; }
   .animate-delay-200 { animation-delay: 200ms; }
   .animate-delay-300 { animation-delay: 300ms; }
   .animate-delay-400 { animation-delay: 400ms; }
   .animate-delay-500 { animation-delay: 500ms; }
   .animate-delay-700 { animation-delay: 700ms; }
-
   .opacity-0-init { opacity: 0; }
-
   @keyframes fadeUp {
     from { opacity: 0; transform: translateY(16px); }
     to   { opacity: 1; transform: translateY(0); }
   }
-
   .animate-fade-up {
     animation: fadeUp 0.8s ease-out forwards;
     opacity: 0;
   }
-
   /* Subtle grain texture overlay */
   .grain::after {
     content: '';
