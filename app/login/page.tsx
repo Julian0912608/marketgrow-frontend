@@ -1,8 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+// ============================================================
+// app/login/page.tsx
+//
+// FIX 15-mei: respecteert ?returnTo=... query param zodat een
+// Shopify install flow (of andere deep links) na login naadloos
+// doorgaan. Anti-open-redirect: alleen interne paths (startsWith '/').
+//
+// Suspense wrapper is verplicht omdat useSearchParams() anders
+// de static page generation breekt tijdens Vercel build.
+// ============================================================
+
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -17,22 +28,55 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
+// ── Outer page: Suspense wrapper ─────────────────────────────
 export default function LoginPage() {
-  const router = useRouter();
-  const setAuth = useAuthStore(s => s.setAuth);
+  return (
+    <Suspense fallback={<LoginFallback />}>
+      <LoginPageInner />
+    </Suspense>
+  );
+}
+
+function LoginFallback() {
+  return (
+    <div className="min-h-screen bg-surface-50 flex items-center justify-center">
+      <Loader2 className="w-6 h-6 animate-spin text-brand-600" />
+    </div>
+  );
+}
+
+// ── Inner component: alle hooks + form logic ─────────────────
+function LoginPageInner() {
+  const router       = useRouter();
+  const searchParams = useSearchParams();
+  const setAuth      = useAuthStore(s => s.setAuth);
+
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError]               = useState('');
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
+
+  // Anti-open-redirect: alleen interne paden accepteren.
+  const safeReturnTo = (() => {
+    const raw = searchParams.get('returnTo');
+    if (!raw) return null;
+    if (!raw.startsWith('/') || raw.startsWith('//')) return null;
+    return raw;
+  })();
+
+  // Pass returnTo door naar register page voor consistente flow.
+  const registerHref = safeReturnTo
+    ? `/register?returnTo=${encodeURIComponent(safeReturnTo)}`
+    : '/register';
 
   const onSubmit = async (data: FormData) => {
     try {
       setError('');
       const res = await api.post('/auth/login', data);
       setAuth(res.data.user, res.data.accessToken);
-      router.push('/dashboard');
+      router.push(safeReturnTo ?? '/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.message ?? 'Invalid email or password.');
     }
@@ -54,7 +98,11 @@ export default function LoginPage() {
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
           <div className="mb-6">
             <h1 className="font-display text-2xl font-800 text-slate-900">Welcome back</h1>
-            <p className="text-slate-500 text-sm mt-1">Sign in to your account</p>
+            <p className="text-slate-500 text-sm mt-1">
+              {safeReturnTo === '/shopify/connect'
+                ? 'Sign in to finish connecting your Shopify store.'
+                : 'Sign in to your account'}
+            </p>
           </div>
 
           {error && (
@@ -112,7 +160,7 @@ export default function LoginPage() {
 
           <p className="text-center text-xs text-slate-400 mt-6">
             Don't have an account?{' '}
-            <Link href="/register" className="text-brand-600 hover:underline font-medium">Start free trial</Link>
+            <Link href={registerHref} className="text-brand-600 hover:underline font-medium">Start free trial</Link>
           </p>
         </div>
       </div>
