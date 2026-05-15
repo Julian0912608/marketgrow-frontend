@@ -55,8 +55,21 @@ export function OnboardingChecklist() {
     const wasDismissed = localStorage.getItem('onboarding_dismissed') === 'true';
     if (wasDismissed) { setDismissed(true); setLoading(false); return; }
 
-    api.get('/onboarding/status')
-      .then(res => setStatus(res.data))
+    // Fix V0 gap 5d: legacy /onboarding/status pad bestaat niet meer in backend,
+    // alleen /onboarding/state. Defensive parsing zodat de checklist niets
+    // verkeerds toont als de shape minimaal afwijkt.
+    api.get('/onboarding/state')
+      .then(res => {
+        const data = res.data ?? {};
+        const completedSteps = Array.isArray(data.completedSteps) ? data.completedSteps : [];
+        const isComplete = data.status === 'completed' || data.isComplete === true;
+        setStatus({
+          currentStep:     typeof data.currentStep === 'string' ? data.currentStep : '',
+          completedSteps,
+          percentComplete: typeof data.percentComplete === 'number' ? data.percentComplete : 0,
+          isComplete,
+        });
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -80,32 +93,29 @@ export function OnboardingChecklist() {
   const nextStep       = STEPS.find(s => !isStepDone(s.id));
 
   return (
-    <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5 mb-6">
+    <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 sm:p-5 mb-6">
 
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-brand-600/20 flex items-center justify-center">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-brand-600/20 flex items-center justify-center flex-shrink-0">
             <Zap className="w-4 h-4 text-brand-400" fill="currentColor" />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-white text-sm font-semibold">Get started</p>
             <p className="text-slate-400 text-xs">{completedCount} of {STEPS.length} steps completed</p>
           </div>
         </div>
-        <button
-          onClick={dismiss}
-          className="w-7 h-7 rounded-lg bg-slate-700/50 hover:bg-slate-700 flex items-center justify-center transition-colors"
-          title="Hide checklist"
-        >
-          <X className="w-3.5 h-3.5 text-slate-400" />
+        <button onClick={dismiss}
+          className="w-7 h-7 rounded-lg bg-slate-700/50 hover:bg-slate-700 flex items-center justify-center transition-colors flex-shrink-0"
+          aria-label="Hide checklist"
+          title="Hide checklist">
+          <X className="w-3.5 h-3.5 text-slate-300" />
         </button>
       </div>
 
       <div className="h-1.5 bg-slate-700 rounded-full mb-5 overflow-hidden">
-        <div
-          className="h-full bg-brand-500 rounded-full transition-all duration-500"
-          style={{ width: `${progress}%` }}
-        />
+        <div className="h-full bg-brand-500 rounded-full transition-all duration-500"
+          style={{ width: `${progress}%` }} />
       </div>
 
       <div className="space-y-2">
@@ -114,12 +124,10 @@ export function OnboardingChecklist() {
           const isNext = nextStep?.id === step.id;
 
           return (
-            <div
-              key={step.id}
+            <div key={step.id}
               className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
-                isNext ? 'bg-brand-600/10 border border-brand-500/20' : done ? 'opacity-60' : 'opacity-40'
-              }`}
-            >
+                isNext ? 'bg-brand-600/10 border border-brand-500/20' : done ? 'opacity-60' : 'opacity-50'
+              }`}>
               <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
                 done ? 'bg-emerald-500' : isNext ? 'bg-brand-600' : 'bg-slate-700'
               }`}>
@@ -139,10 +147,8 @@ export function OnboardingChecklist() {
               </div>
 
               {isNext && step.href && (
-                <button
-                  onClick={() => router.push(step.href!)}
-                  className="flex items-center gap-1 text-xs font-semibold text-brand-400 hover:text-brand-300 flex-shrink-0 transition-colors"
-                >
+                <button onClick={() => router.push(step.href!)}
+                  className="flex items-center gap-1 text-xs font-semibold text-brand-400 hover:text-brand-300 flex-shrink-0 transition-colors">
                   {step.cta}
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>
