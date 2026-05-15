@@ -8,6 +8,11 @@
 // handoff token bewaard. Op deze pagina koppelt de gebruiker
 // (of een nieuw account) de shop aan zijn MarketGrow tenant.
 //
+// Suspense wrapper is verplicht in Next.js App Router omdat
+// useSearchParams() anders de static page generation breekt
+// tijdens build (next.js prerender error). Zonder Suspense
+// faalt 'npm run build' op Vercel.
+//
 // Flow:
 //   - Mount: lees handoff + shop uit URL, sla op in localStorage
 //   - GET /shopify/install/preview voor shop info (niet-consumerend)
@@ -19,7 +24,7 @@
 //     stappen 1-3 doet en de Day Zero pipeline kan starten)
 // ============================================================
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Store, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
@@ -32,7 +37,25 @@ interface PreviewResponse {
   shopName: string | null;
 }
 
+// ── Outer page: Suspense wrapper ─────────────────────────────
 export default function ShopifyConnectPage() {
+  return (
+    <Suspense fallback={<LoadingScreen />}>
+      <ShopifyConnectInner />
+    </Suspense>
+  );
+}
+
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+    </div>
+  );
+}
+
+// ── Inner component: alle hooks + logic ──────────────────────
+function ShopifyConnectInner() {
   const router       = useRouter();
   const searchParams = useSearchParams();
 
@@ -150,11 +173,7 @@ export default function ShopifyConnectPage() {
 
   // ── Renders ─────────────────────────────────────────────
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   return (
