@@ -1,8 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+// ============================================================
+// app/register/page.tsx
+//
+// FIX 15-mei: respecteert ?returnTo=... zoals login page,
+// zodat Shopify install flow naadloos doorgaat na sign-up.
+// Anti-open-redirect: alleen interne paths.
+//
+// FIX 15-mei (2): trailing dead code onderaan opgeruimd (er
+// stond JSX na de return ( ... ) sluit-haakje).
+//
+// Suspense wrapper verplicht voor useSearchParams() in App Router.
+// ============================================================
+
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -20,22 +33,61 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
+// ── Outer page: Suspense wrapper ─────────────────────────────
 export default function RegisterPage() {
-  const router = useRouter();
-  const setAuth = useAuthStore(s => s.setAuth);
+  return (
+    <Suspense fallback={<RegisterFallback />}>
+      <RegisterPageInner />
+    </Suspense>
+  );
+}
+
+function RegisterFallback() {
+  return (
+    <div className="min-h-screen bg-surface-50 flex items-center justify-center">
+      <Loader2 className="w-6 h-6 animate-spin text-brand-600" />
+    </div>
+  );
+}
+
+// ── Inner component: alle hooks + form logic ─────────────────
+function RegisterPageInner() {
+  const router       = useRouter();
+  const searchParams = useSearchParams();
+  const setAuth      = useAuthStore(s => s.setAuth);
+
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError]               = useState('');
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
+
+  // Anti-open-redirect: alleen interne paden accepteren.
+  const safeReturnTo = (() => {
+    const raw = searchParams.get('returnTo');
+    if (!raw) return null;
+    if (!raw.startsWith('/') || raw.startsWith('//')) return null;
+    return raw;
+  })();
+
+  // Pass returnTo door naar login page voor consistente flow.
+  const loginHref = safeReturnTo
+    ? `/login?returnTo=${encodeURIComponent(safeReturnTo)}`
+    : '/login';
+
+  // Default redirect na register is /onboarding. Met returnTo
+  // (bijv. /shopify/connect) gaan we daar eerst heen, en de
+  // shopify/connect page stuurt na finalize alsnog naar
+  // /onboarding voor de wizard.
+  const successRedirect = safeReturnTo ?? '/onboarding';
 
   const onSubmit = async (data: FormData) => {
     try {
       setError('');
       const res = await api.post('/auth/register', data);
       setAuth(res.data.user, res.data.accessToken);
-      router.push('/onboarding');
+      router.push(successRedirect);
     } catch (err: any) {
       setError(err.response?.data?.message ?? 'Something went wrong. Please try again.');
     }
@@ -45,7 +97,6 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-surface-50 flex items-center justify-center px-4 py-16">
       <div className="w-full max-w-md">
 
-        {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 font-display font-700 text-xl text-slate-900">
             <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center">
@@ -58,7 +109,11 @@ export default function RegisterPage() {
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
           <div className="mb-6">
             <h1 className="font-display text-2xl font-800 text-slate-900">Create your account</h1>
-            <p className="text-slate-500 text-sm mt-1">14-day free trial · No credit card needed</p>
+            <p className="text-slate-500 text-sm mt-1">
+              {safeReturnTo === '/shopify/connect'
+                ? 'After sign-up we will finish connecting your Shopify store.'
+                : '14-day free trial · No credit card needed'}
+            </p>
           </div>
 
           {error && (
@@ -142,7 +197,7 @@ export default function RegisterPage() {
 
           <p className="text-center text-xs text-slate-400 mt-6">
             Already have an account?{' '}
-            <Link href="/login" className="text-brand-600 hover:underline font-medium">Sign in</Link>
+            <Link href={loginHref} className="text-brand-600 hover:underline font-medium">Sign in</Link>
           </p>
 
           <p className="text-center text-xs text-slate-400 mt-3">
@@ -154,10 +209,4 @@ export default function RegisterPage() {
       </div>
     </div>
   );
-  <p className="text-xs text-slate-400 text-center mt-4">
-//     By creating an account you agree to our{' '}
-//     <Link href="/terms" className="text-indigo-600 hover:underline">Terms</Link>
-//     {' '}and{' '}
-//     <Link href="/privacy" className="text-indigo-600 hover:underline">Privacy Policy</Link>.
-//   </p>
 }
