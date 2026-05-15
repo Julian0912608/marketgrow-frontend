@@ -7,6 +7,9 @@
 //
 // De ArticleReader (client) upgrade naar full bodyMarkdown als
 // de user een access token in sessionStorage heeft.
+//
+// Logged-in users zien een "Back to dashboard" link bovenaan
+// (via KbBackToDashboard client component).
 // ============================================================
 
 import type { Metadata } from 'next';
@@ -14,6 +17,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { ArticleReader } from '../_components/ArticleReader';
+import { KbBackToDashboard } from '../_components/KbBackToDashboard';
 
 export const dynamic = 'force-dynamic';
 
@@ -110,6 +114,9 @@ export default async function ArticlePage({
 
   return (
     <main className="min-h-screen bg-white">
+      {/* Logged-in only: back to dashboard link */}
+      <KbBackToDashboard />
+
       {/* Header */}
       <header className="border-b border-slate-200 bg-slate-50">
         <div className="max-w-3xl mx-auto px-6 py-6">
