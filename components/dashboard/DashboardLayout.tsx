@@ -7,6 +7,7 @@
 // Globale content generatie indicator: toont spinner als AI bezig is.
 //
 // PR 3a: Meta Studio nav item toegevoegd (gated op 'ad-analytics' = Growth+)
+// V0 Gap 4: Knowledge Base nav item toegevoegd (no gating, beschikbaar voor alle plans).
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -14,7 +15,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, TrendingUp, ShoppingBag, Megaphone,
   Plug, Settings, LogOut, Zap, Bell, Menu, Sparkles,
-  Instagram, Store, Lock, Users, Wand2,
+  Instagram, Store, Lock, Users, Wand2, BookOpen,
 } from 'lucide-react';
 import { useAuthStore } from '@/lib/store';
 import { usePermissions } from '@/lib/usePermissions';
@@ -34,17 +35,18 @@ function GeneratingBadge() {
 
 // feature = null betekent altijd beschikbaar (settings, integrations, etc.)
 const navItems = [
-  { label: 'Overview',       href: '/dashboard',                feature: null,                   icon: LayoutDashboard },
-  { label: 'Shops',          href: '/dashboard/shops',          feature: 'multi-shop',           icon: Store },
-  { label: 'Sales',          href: '/dashboard/analytics',      feature: 'order-analytics',      icon: TrendingUp },
-  { label: 'Products',       href: '/dashboard/products',       feature: 'order-analytics',      icon: ShoppingBag },
-  { label: 'Advertising',    href: '/dashboard/ads',            feature: 'ad-analytics',         icon: Megaphone },
-  { label: 'AI Insights',    href: '/dashboard/ai-insights',    feature: 'ai-recommendations',   icon: Sparkles },
-  { label: 'Social Content', href: '/dashboard/social-content', feature: 'ai-recommendations',   icon: Instagram },
-  { label: 'Meta Studio',    href: '/dashboard/meta-studio',    feature: 'ad-analytics',         icon: Wand2 },
-  { label: 'Team',           href: '/dashboard/team',           feature: 'team-accounts',        icon: Users },
-  { label: 'Integrations',   href: '/dashboard/integrations',   feature: null,                   icon: Plug },
-  { label: 'Settings',       href: '/settings',                 feature: null,                   icon: Settings },
+  { label: 'Overview',        href: '/dashboard',                feature: null,                   icon: LayoutDashboard },
+  { label: 'Shops',           href: '/dashboard/shops',          feature: 'multi-shop',           icon: Store },
+  { label: 'Sales',           href: '/dashboard/analytics',      feature: 'order-analytics',      icon: TrendingUp },
+  { label: 'Products',        href: '/dashboard/products',       feature: 'order-analytics',      icon: ShoppingBag },
+  { label: 'Advertising',     href: '/dashboard/ads',            feature: 'ad-analytics',         icon: Megaphone },
+  { label: 'AI Insights',     href: '/dashboard/ai-insights',    feature: 'ai-recommendations',   icon: Sparkles },
+  { label: 'Social Content',  href: '/dashboard/social-content', feature: 'ai-recommendations',   icon: Instagram },
+  { label: 'Meta Studio',     href: '/dashboard/meta-studio',    feature: 'ad-analytics',         icon: Wand2 },
+  { label: 'Team',            href: '/dashboard/team',           feature: 'team-accounts',        icon: Users },
+  { label: 'Integrations',    href: '/dashboard/integrations',   feature: null,                   icon: Plug },
+  { label: 'Knowledge Base',  href: '/kb',                       feature: null,                   icon: BookOpen },
+  { label: 'Settings',        href: '/settings',                 feature: null,                   icon: Settings },
 ];
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -117,11 +119,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
           if (locked) {
             return (
-              <button
-                key={item.href}
-                onClick={() => handleLockedClick(item.feature!)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-600 hover:text-slate-400 hover:bg-slate-800/30 group"
-              >
+              <button key={item.href} onClick={() => handleLockedClick(item.feature!)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-600 hover:text-slate-400 hover:bg-slate-800/30 group">
                 <item.icon className="w-4 h-4 flex-shrink-0" />
                 <span className="flex-1 text-left">{item.label}</span>
                 <Lock className="w-3 h-3 opacity-50 group-hover:opacity-100 transition-opacity" />
@@ -130,16 +128,11 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           }
 
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setSidebarOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+            <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                 active
                   ? 'bg-brand-600/15 text-brand-400 border border-brand-600/20'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-              }`}
-            >
+              }`}>
               <item.icon className="w-4 h-4 flex-shrink-0" />
               <span className="flex-1">{item.label}</span>
               {isContentItem && <GeneratingBadge />}
@@ -152,10 +145,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           <div className="mt-4 mx-1 p-3 rounded-xl bg-brand-600/10 border border-brand-600/20">
             <p className="text-xs font-semibold text-brand-400 mb-1">Upgrade to Growth</p>
             <p className="text-xs text-slate-500 mb-2">Unlock AI insights, ad analytics and more.</p>
-            <Link
-              href="/settings?tab=billing"
-              className="block text-center text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white py-1.5 rounded-lg transition-colors"
-            >
+            <Link href="/settings?tab=billing" className="block text-center text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white py-1.5 rounded-lg transition-colors">
               View plans →
             </Link>
           </div>
@@ -175,10 +165,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             <div className="text-xs text-slate-500 capitalize">{planSlug} plan</div>
           </div>
         </div>
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-500 hover:text-white hover:bg-slate-800 transition-colors"
-        >
+        <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-500 hover:text-white hover:bg-slate-800 transition-colors">
           <LogOut className="w-4 h-4" />
           Sign out
         </button>
