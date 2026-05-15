@@ -23,7 +23,6 @@ interface Stats {
   change:   { revenue: number; orders: number };
 }
 
-// FIX: veldnamen matchen de API response van /analytics/top-products
 interface TopProduct {
   title:         string;
   platform:      string;
@@ -134,7 +133,7 @@ function CreditBar({ credits, planSlug }: { credits: Credits; planSlug: string }
           <Zap className={`w-3.5 h-3.5 ${isExhausted ? 'text-rose-400' : isLow ? 'text-amber-400' : 'text-brand-400'}`} />
           <span className="text-xs font-medium text-slate-300">AI Credits this month</span>
         </div>
-        <span className={`text-xs font-semibold ${isExhausted ? 'text-rose-400' : isLow ? 'text-amber-400' : 'text-slate-400'}`}>{used} / {limit}</span>
+        <span className={`text-xs font-semibold ${isExhausted ? 'text-rose-400' : isLow ? 'text-amber-400' : 'text-slate-300'}`}>{used} / {limit}</span>
       </div>
       <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
         <div className={`h-full rounded-full transition-all ${isExhausted ? 'bg-rose-500' : isLow ? 'bg-amber-500' : 'bg-brand-500'}`} style={{ width: `${pct}%` }} />
@@ -146,7 +145,7 @@ function CreditBar({ credits, planSlug }: { credits: Credits; planSlug: string }
         </div>
       )}
       {isLow && !isExhausted && (
-        <p className="text-xs text-amber-400 mt-2">{limit - used} credits remaining — <Link href="/settings/billing" className="underline underline-offset-2 hover:text-amber-300">upgrade for more</Link></p>
+        <p className="text-xs text-amber-400 mt-2">{limit - used} credits remaining. <Link href="/settings/billing" className="underline underline-offset-2 hover:text-amber-300">Upgrade for more</Link></p>
       )}
     </div>
   );
@@ -157,7 +156,7 @@ function CreditsCardContent({ credits, loading }: { credits: Credits | null; loa
     return (
       <>
         <div className="h-7 bg-slate-700/50 rounded-lg animate-pulse mb-2 w-20" />
-        <p className="text-slate-500 text-xs">Loading...</p>
+        <p className="text-slate-400 text-xs">Loading...</p>
       </>
     );
   }
@@ -167,7 +166,7 @@ function CreditsCardContent({ credits, loading }: { credits: Credits | null; loa
         <span className="font-display text-2xl font-800 text-white mb-1 block">Unlimited</span>
         <div className="flex items-center gap-1.5">
           <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-          <span className="text-xs text-emerald-400 font-medium">Scale plan — no limits</span>
+          <span className="text-xs text-emerald-400 font-medium">Scale plan, no limits</span>
         </div>
       </>
     );
@@ -182,16 +181,16 @@ function CreditsCardContent({ credits, loading }: { credits: Credits | null; loa
       <p className={`font-display text-2xl font-800 mb-1 ${isOut ? 'text-rose-400' : isLow ? 'text-amber-400' : 'text-white'}`}>
         {remaining.toLocaleString('nl-NL')}
       </p>
-      <p className="text-slate-500 text-xs">{isOut ? 'Credits used up this month' : `of ${limit} credits remaining`}</p>
+      <p className="text-slate-400 text-xs">{isOut ? 'Credits used up this month' : `of ${limit} credits remaining`}</p>
     </>
   );
 }
 
 function StatCard({ label, children, icon: Icon, color }: { label: string; children: React.ReactNode; icon: any; color: string }) {
   return (
-    <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5">
+    <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 sm:p-5">
       <div className="flex items-center justify-between mb-3">
-        <p className="text-slate-400 text-xs font-medium">{label}</p>
+        <p className="text-slate-300 text-xs font-medium">{label}</p>
         <div className={`w-8 h-8 rounded-lg ${color} flex items-center justify-center`}>
           <Icon className="w-4 h-4 text-white" />
         </div>
@@ -271,18 +270,19 @@ export default function DashboardPage() {
 
   return (
     <PageErrorBoundary label="dashboard">
-      <div className="p-6 max-w-5xl mx-auto">
+      <div className="p-4 sm:p-6 max-w-5xl mx-auto">
         <StartSetupCard />
         <OnboardingChecklist />
 
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="font-display text-2xl font-800 text-white">{getGreeting()}, {user?.firstName ?? 'there'} 👋</h1>
+        <div className="flex items-center justify-between gap-3 mb-8">
+          <div className="min-w-0">
+            <h1 className="font-display text-xl sm:text-2xl font-800 text-white truncate">{getGreeting()}, {user?.firstName ?? 'there'} 👋</h1>
             <p className="text-slate-400 text-sm mt-1">{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
           </div>
-          <Link href="/dashboard/ai-insights" className="flex items-center gap-2 bg-brand-600/10 border border-brand-600/20 hover:bg-brand-600/20 text-brand-400 text-xs font-medium px-3 py-2 rounded-xl transition-colors">
+          <Link href="/dashboard/ai-insights" className="flex flex-shrink-0 items-center gap-2 bg-brand-600/10 border border-brand-600/20 hover:bg-brand-600/20 text-brand-400 text-xs font-medium px-3 py-2 rounded-xl transition-colors">
             <Sparkles className="w-3.5 h-3.5" />
-            AI Insights
+            <span className="hidden sm:inline">AI Insights</span>
+            <span className="sm:hidden">AI</span>
           </Link>
         </div>
 
@@ -292,7 +292,7 @@ export default function DashboardPage() {
 
         {hasStores && (
           <>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
               <StatCard label="Revenue excl. VAT (7d)" icon={TrendingUp} color="bg-emerald-500">
                 {loading || !stats ? <div className="h-7 bg-slate-700/50 rounded-lg animate-pulse mb-2" /> : (
                   <><p className="font-display text-2xl font-800 text-white mb-1">{formatCurrency((stats.revenue ?? 0) / 1.21)}</p><ChangeBadge change={stats.change.revenue} /></>
@@ -311,33 +311,33 @@ export default function DashboardPage() {
 
               <StatCard label="Avg order value (7d)" icon={TrendingUp} color="bg-amber-500">
                 {loading || !stats ? <div className="h-7 bg-slate-700/50 rounded-lg animate-pulse mb-2" /> : (
-                  <><p className="font-display text-2xl font-800 text-white mb-1">{formatCurrency(stats.avgOrder ?? 0)}</p><p className="text-slate-500 text-xs">per order</p></>
+                  <><p className="font-display text-2xl font-800 text-white mb-1">{formatCurrency(stats.avgOrder ?? 0)}</p><p className="text-slate-400 text-xs">per order</p></>
                 )}
               </StatCard>
             </div>
 
-            <div className="grid lg:grid-cols-2 gap-4 mb-6">
+            <div className="grid lg:grid-cols-2 gap-3 sm:gap-4 mb-6">
               <CardErrorBoundary>
-                <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5">
+                <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 sm:p-5">
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-sm font-semibold text-slate-300">Connected stores</h2>
                     <Link href="/dashboard/integrations" className="text-xs text-brand-400 hover:text-brand-300 transition-colors">Manage →</Link>
                   </div>
                   <div className="space-y-3">
                     {stores.map(store => (
-                      <div key={store.id} className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center">
+                      <div key={store.id} className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0">
                             <Store className="w-3.5 h-3.5 text-slate-400" />
                           </div>
-                          <div>
-                            <p className="text-sm font-medium text-white">{store.shopName || store.platformSlug}</p>
-                            <p className="text-xs text-slate-500">Last sync: {timeAgo(store.lastSyncAt)}</p>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-white truncate">{store.shopName || store.platformSlug}</p>
+                            <p className="text-xs text-slate-400">Last sync: {timeAgo(store.lastSyncAt)}</p>
                           </div>
                         </div>
                         <button onClick={() => handleSync(store.id)} disabled={syncing === store.id}
-                          className="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 flex items-center justify-center transition-colors disabled:opacity-50" title="Sync now">
-                          <RefreshCw className={`w-3 h-3 text-slate-400 ${syncing === store.id ? 'animate-spin' : ''}`} />
+                          className="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 flex items-center justify-center transition-colors disabled:opacity-50 flex-shrink-0" title="Sync now" aria-label={`Sync ${store.shopName || store.platformSlug}`}>
+                          <RefreshCw className={`w-3 h-3 text-slate-300 ${syncing === store.id ? 'animate-spin' : ''}`} />
                         </button>
                       </div>
                     ))}
@@ -346,22 +346,22 @@ export default function DashboardPage() {
               </CardErrorBoundary>
 
               <CardErrorBoundary>
-                <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5">
+                <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 sm:p-5">
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-sm font-semibold text-slate-300">Top products (7d)</h2>
                     <Link href="/dashboard/products" className="text-xs text-brand-400 hover:text-brand-300 transition-colors">All products →</Link>
                   </div>
                   {topProducts.length === 0 ? (
-                    <p className="text-slate-500 text-sm py-4 text-center">No sales data yet</p>
+                    <p className="text-slate-400 text-sm py-4 text-center">No sales data yet</p>
                   ) : (
                     <div className="space-y-3">
                       {topProducts.slice(0, 4).map((p, i) => (
-                        <div key={i} className="flex items-center justify-between gap-3">
-                          <div className="flex-1 min-w-0">
+                        <div key={i} className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                          <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium text-white truncate">{p.title}</p>
-                            <p className="text-xs text-slate-500">{p.total_sold} sold</p>
+                            <p className="text-xs text-slate-400">{p.total_sold} sold</p>
                           </div>
-                          <p className="text-sm font-semibold text-emerald-400 flex-shrink-0">
+                          <p className="text-sm font-semibold text-emerald-400 sm:flex-shrink-0">
                             {formatCurrency(parseFloat(p.total_revenue ?? '0') / 1.21)}
                           </p>
                         </div>
@@ -373,18 +373,18 @@ export default function DashboardPage() {
             </div>
 
             <CardErrorBoundary>
-              <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5">
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 sm:p-5">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-brand-600/20 flex items-center justify-center">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-7 h-7 rounded-lg bg-brand-600/20 flex items-center justify-center flex-shrink-0">
                       <Sparkles className="w-3.5 h-3.5 text-brand-400" />
                     </div>
-                    <h2 className="text-sm font-semibold text-slate-300">Today's AI Insight</h2>
+                    <h2 className="text-sm font-semibold text-slate-300 truncate">Today's AI Insight</h2>
                   </div>
-                  <Link href="/dashboard/ai-insights" className="text-xs text-brand-400 hover:text-brand-300 transition-colors">Full briefing →</Link>
+                  <Link href="/dashboard/ai-insights" className="text-xs text-brand-400 hover:text-brand-300 transition-colors flex-shrink-0">Full briefing →</Link>
                 </div>
                 {insightError ? (
-                  <div className="flex items-center gap-2 text-slate-500 text-sm py-2">
+                  <div className="flex items-center gap-2 text-slate-400 text-sm py-2">
                     <AlertCircle className="w-4 h-4 flex-shrink-0" />
                     <span>Insight couldn't load. <Link href="/dashboard/ai-insights" className="text-brand-400 hover:text-brand-300">Try the full page →</Link></span>
                   </div>
@@ -393,8 +393,8 @@ export default function DashboardPage() {
                     <p className="text-slate-300 text-sm leading-relaxed mb-4">{insight.briefing}</p>
                     {insight.actions?.slice(0, 2).map((action, i) => (
                       <div key={i} className="flex items-start gap-3 py-2 border-t border-slate-700/50 first:border-0 first:pt-0">
-                        <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${action.priority === 'high' ? 'bg-rose-400' : action.priority === 'medium' ? 'bg-amber-400' : 'bg-slate-500'}`} />
-                        <div>
+                        <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${action.priority === 'high' ? 'bg-rose-400' : action.priority === 'medium' ? 'bg-amber-400' : 'bg-slate-400'}`} />
+                        <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium text-white">{action.title}</p>
                           <p className="text-xs text-slate-400 mt-0.5">{action.description}</p>
                         </div>
