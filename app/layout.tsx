@@ -19,6 +19,9 @@ export const metadata: Metadata = {
     shortcut: '/favicon.ico',
     apple:    '/icons/apple-touch-icon.png',
   },
+  other: {
+    'mobile-web-app-capable': 'yes',
+  },
   // Next.js voegt automatisch <link rel="manifest"> toe omdat app/manifest.ts bestaat
 };
 
