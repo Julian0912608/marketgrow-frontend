@@ -188,10 +188,10 @@ function CreditsCardContent({ credits, loading }: { credits: Credits | null; loa
 
 function StatCard({ label, children, icon: Icon, color }: { label: string; children: React.ReactNode; icon: any; color: string }) {
   return (
-    <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 sm:p-5">
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-slate-300 text-xs font-medium">{label}</p>
-        <div className={`w-8 h-8 rounded-lg ${color} flex items-center justify-center`}>
+    <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 sm:p-5 min-w-0">
+      <div className="flex items-center justify-between mb-3 gap-2">
+        <p className="text-slate-300 text-xs font-medium truncate">{label}</p>
+        <div className={`w-8 h-8 rounded-lg ${color} flex items-center justify-center flex-shrink-0`}>
           <Icon className="w-4 h-4 text-white" />
         </div>
       </div>
@@ -270,12 +270,12 @@ export default function DashboardPage() {
 
   return (
     <PageErrorBoundary label="dashboard">
-      <div className="p-4 sm:p-6 max-w-5xl mx-auto">
+      <div className="p-4 sm:p-6 max-w-5xl mx-auto overflow-x-hidden">
         <StartSetupCard />
-        <OnboardingChecklist />
+        <OnboardingChecklist hasStores={hasStores} planSlug={planSlug} />
 
-        <div className="flex items-center justify-between gap-3 mb-8">
-          <div className="min-w-0">
+        <div className="flex items-center justify-between gap-3 mb-8 min-w-0">
+          <div className="min-w-0 flex-1">
             <h1 className="font-display text-xl sm:text-2xl font-800 text-white truncate">{getGreeting()}, {user?.firstName ?? 'there'} 👋</h1>
             <p className="text-slate-400 text-sm mt-1">{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
           </div>
@@ -295,7 +295,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
               <StatCard label="Revenue excl. VAT (7d)" icon={TrendingUp} color="bg-emerald-500">
                 {loading || !stats ? <div className="h-7 bg-slate-700/50 rounded-lg animate-pulse mb-2" /> : (
-                  <><p className="font-display text-2xl font-800 text-white mb-1">{formatCurrency((stats.revenue ?? 0) / 1.21)}</p><ChangeBadge change={stats.change.revenue} /></>
+                  <><p className="font-display text-2xl font-800 text-white mb-1 truncate">{formatCurrency((stats.revenue ?? 0) / 1.21)}</p><ChangeBadge change={stats.change.revenue} /></>
                 )}
               </StatCard>
 
@@ -311,32 +311,34 @@ export default function DashboardPage() {
 
               <StatCard label="Avg order value (7d)" icon={TrendingUp} color="bg-amber-500">
                 {loading || !stats ? <div className="h-7 bg-slate-700/50 rounded-lg animate-pulse mb-2" /> : (
-                  <><p className="font-display text-2xl font-800 text-white mb-1">{formatCurrency(stats.avgOrder ?? 0)}</p><p className="text-slate-400 text-xs">per order</p></>
+                  <><p className="font-display text-2xl font-800 text-white mb-1 truncate">{formatCurrency(stats.avgOrder ?? 0)}</p><p className="text-slate-400 text-xs">per order</p></>
                 )}
               </StatCard>
             </div>
 
-            <div className="grid lg:grid-cols-2 gap-3 sm:gap-4 mb-6">
+            <div className="grid lg:grid-cols-2 gap-3 sm:gap-4 mb-6 min-w-0">
               <CardErrorBoundary>
-                <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 sm:p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-sm font-semibold text-slate-300">Connected stores</h2>
-                    <Link href="/dashboard/integrations" className="text-xs text-brand-400 hover:text-brand-300 transition-colors">Manage →</Link>
+                <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 sm:p-5 min-w-0 overflow-hidden">
+                  <div className="flex items-center justify-between mb-4 gap-2">
+                    <h2 className="text-sm font-semibold text-slate-300 truncate">Connected stores</h2>
+                    <Link href="/dashboard/integrations" className="text-xs text-brand-400 hover:text-brand-300 transition-colors flex-shrink-0">Manage →</Link>
                   </div>
                   <div className="space-y-3">
                     {stores.map(store => (
-                      <div key={store.id} className="flex items-center justify-between gap-3">
+                      <div key={store.id} className="flex items-center justify-between gap-3 min-w-0">
                         <div className="flex items-center gap-3 min-w-0 flex-1">
                           <div className="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0">
                             <Store className="w-3.5 h-3.5 text-slate-400" />
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium text-white truncate">{store.shopName || store.platformSlug}</p>
-                            <p className="text-xs text-slate-400">Last sync: {timeAgo(store.lastSyncAt)}</p>
+                            <p className="text-xs text-slate-400 truncate">Last sync: {timeAgo(store.lastSyncAt)}</p>
                           </div>
                         </div>
                         <button onClick={() => handleSync(store.id)} disabled={syncing === store.id}
-                          className="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 flex items-center justify-center transition-colors disabled:opacity-50 flex-shrink-0" title="Sync now" aria-label={`Sync ${store.shopName || store.platformSlug}`}>
+                          className="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 flex items-center justify-center transition-colors disabled:opacity-50 flex-shrink-0"
+                          aria-label={`Sync ${store.shopName || store.platformSlug}`}
+                          title="Sync now">
                           <RefreshCw className={`w-3 h-3 text-slate-300 ${syncing === store.id ? 'animate-spin' : ''}`} />
                         </button>
                       </div>
@@ -346,22 +348,22 @@ export default function DashboardPage() {
               </CardErrorBoundary>
 
               <CardErrorBoundary>
-                <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 sm:p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-sm font-semibold text-slate-300">Top products (7d)</h2>
-                    <Link href="/dashboard/products" className="text-xs text-brand-400 hover:text-brand-300 transition-colors">All products →</Link>
+                <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 sm:p-5 min-w-0 overflow-hidden">
+                  <div className="flex items-center justify-between mb-4 gap-2">
+                    <h2 className="text-sm font-semibold text-slate-300 truncate">Top products (7d)</h2>
+                    <Link href="/dashboard/products" className="text-xs text-brand-400 hover:text-brand-300 transition-colors flex-shrink-0">All products →</Link>
                   </div>
                   {topProducts.length === 0 ? (
                     <p className="text-slate-400 text-sm py-4 text-center">No sales data yet</p>
                   ) : (
                     <div className="space-y-3">
                       {topProducts.slice(0, 4).map((p, i) => (
-                        <div key={i} className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                        <div key={i} className="flex items-center justify-between gap-3 min-w-0">
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium text-white truncate">{p.title}</p>
                             <p className="text-xs text-slate-400">{p.total_sold} sold</p>
                           </div>
-                          <p className="text-sm font-semibold text-emerald-400 sm:flex-shrink-0">
+                          <p className="text-sm font-semibold text-emerald-400 flex-shrink-0 whitespace-nowrap">
                             {formatCurrency(parseFloat(p.total_revenue ?? '0') / 1.21)}
                           </p>
                         </div>
@@ -373,8 +375,8 @@ export default function DashboardPage() {
             </div>
 
             <CardErrorBoundary>
-              <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 sm:p-5">
-                <div className="flex items-center justify-between mb-4">
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 sm:p-5 min-w-0 overflow-hidden">
+                <div className="flex items-center justify-between mb-4 gap-2">
                   <div className="flex items-center gap-2 min-w-0">
                     <div className="w-7 h-7 rounded-lg bg-brand-600/20 flex items-center justify-center flex-shrink-0">
                       <Sparkles className="w-3.5 h-3.5 text-brand-400" />
@@ -384,8 +386,8 @@ export default function DashboardPage() {
                   <Link href="/dashboard/ai-insights" className="text-xs text-brand-400 hover:text-brand-300 transition-colors flex-shrink-0">Full briefing →</Link>
                 </div>
                 {insightError ? (
-                  <div className="flex items-center gap-2 text-slate-400 text-sm py-2">
-                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <div className="flex items-start gap-2 text-slate-400 text-sm py-2">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                     <span>Insight couldn't load. <Link href="/dashboard/ai-insights" className="text-brand-400 hover:text-brand-300">Try the full page →</Link></span>
                   </div>
                 ) : insight ? (
