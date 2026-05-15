@@ -8,6 +8,7 @@
 //
 // PR 3a: Meta Studio nav item toegevoegd (gated op 'ad-analytics' = Growth+)
 // V0 Gap 4: Knowledge Base nav item toegevoegd (no gating, beschikbaar voor alle plans).
+// V0 Gap 5a: aria-label op mobile menu button en notifications button voor a11y.
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -194,11 +195,11 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
         {/* Top bar */}
         <header className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950">
-          <button className="lg:hidden text-slate-400 hover:text-white" onClick={() => setSidebarOpen(true)}>
+          <button aria-label="Open menu" className="lg:hidden text-slate-400 hover:text-white" onClick={() => setSidebarOpen(true)}>
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex-1" />
-          <button className="relative w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors">
+          <button aria-label="Notifications" className="relative w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors">
             <Bell className="w-4 h-4" />
           </button>
         </header>
