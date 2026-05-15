@@ -10,6 +10,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <FeatureFlagsProvider>
         <DashboardLayout>{children}</DashboardLayout>
         <A2HSPrompt />
+        <PushNotificationPrompt />
       </FeatureFlagsProvider>
     </OnboardingGuard>
   );
