@@ -101,9 +101,11 @@ export function PushNotificationPrompt() {
       if (!vapidKey || vapidKey.length < 20) return;
 
       // 6. Service worker registered?
+      // Note: getRegistration() returns Promise<ServiceWorkerRegistration | undefined>,
+      // so we coerce to null with ?? null for our local typing.
       let registration: ServiceWorkerRegistration | null = null;
       try {
-        registration = await navigator.serviceWorker.getRegistration();
+        registration = (await navigator.serviceWorker.getRegistration()) ?? null;
       } catch {
         return;
       }
@@ -228,7 +230,7 @@ export function PushNotificationPrompt() {
             <div className="flex items-center gap-2">
               <button onClick={handleEnable} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-medium disabled:opacity-60 disabled:cursor-not-allowed">
                 {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bell className="w-3.5 h-3.5" />}
-                {busy ? 'Enabling…' : 'Enable notifications'}
+                {busy ? 'Enabling...' : 'Enable notifications'}
               </button>
               <button onClick={handleDismiss} disabled={busy} className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 text-xs">
                 Not now
