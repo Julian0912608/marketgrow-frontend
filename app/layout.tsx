@@ -1,9 +1,27 @@
 import type { Metadata, Viewport } from 'next';
+import { DM_Sans, Bricolage_Grotesque } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { CookieBanner } from '@/components/CookieBanner';
 import { ServiceWorkerRegister } from '@/components/pwa/ServiceWorkerRegister';
 import './globals.css';
+
+// Self-hosted via next/font/google. Geen render-blocking CSS request meer
+// naar fonts.googleapis.com. Automatische preconnect, automatic font-display swap,
+// en subsetting tot Latin-only. Variabelen matchen globals.css :root fallbacks.
+const dmSans = DM_Sans({
+  subsets:  ['latin'],
+  display:  'swap',
+  variable: '--font-geist-sans',
+  weight:   ['300', '400', '500', '600', '700'],
+});
+
+const bricolage = Bricolage_Grotesque({
+  subsets:  ['latin'],
+  display:  'swap',
+  variable: '--font-cabinet',
+  weight:   ['400', '500', '600', '700', '800'],
+});
 
 export const metadata: Metadata = {
   title: 'MarketGrow - AI-Powered Ecommerce Intelligence',
@@ -37,7 +55,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="scroll-smooth">
+    <html lang="en" className={`${dmSans.variable} ${bricolage.variable} scroll-smooth`}>
       <body className="grain antialiased">
         {children}
         <Analytics />
