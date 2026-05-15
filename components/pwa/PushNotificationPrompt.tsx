@@ -34,14 +34,21 @@ import {
 // ── Helpers ──────────────────────────────────────────────────
 
 // VAPID public key is a base64url string. PushManager.subscribe()
-// wants it as Uint8Array.
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
+// wants it as a BufferSource (typically a Uint8Array backed by
+// an ArrayBuffer, not a SharedArrayBuffer).
+//
+// TS 5.7+ note: typed arrays are now generic over their buffer type.
+// We must allocate the ArrayBuffer explicitly so the resulting
+// Uint8Array is Uint8Array<ArrayBuffer> (not Uint8Array<ArrayBufferLike>),
+// which is what BufferSource requires.
+function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64  = (base64String + padding)
     .replace(/-/g, '+')
     .replace(/_/g, '/');
-  const raw = window.atob(base64);
-  const out = new Uint8Array(raw.length);
+  const raw    = window.atob(base64);
+  const buffer = new ArrayBuffer(raw.length);
+  const out    = new Uint8Array(buffer);
   for (let i = 0; i < raw.length; i += 1) out[i] = raw.charCodeAt(i);
   return out;
 }
@@ -101,8 +108,8 @@ export function PushNotificationPrompt() {
       if (!vapidKey || vapidKey.length < 20) return;
 
       // 6. Service worker registered?
-      // Note: getRegistration() returns Promise<ServiceWorkerRegistration | undefined>,
-      // so we coerce to null with ?? null for our local typing.
+      // getRegistration() returns Promise<ServiceWorkerRegistration | undefined>
+      // so we coerce undefined to null with ?? null.
       let registration: ServiceWorkerRegistration | null = null;
       try {
         registration = (await navigator.serviceWorker.getRegistration()) ?? null;
