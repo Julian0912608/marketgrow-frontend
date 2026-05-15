@@ -1,17 +1,37 @@
 'use client';
 
 // components/dashboard/OnboardingChecklist.tsx
+//
+// Smart onboarding checklist: gebruikt props (hasStores, planSlug) van het
+// dashboard om de echte state af te leiden, ipv puur op backend completedSteps
+// te vertrouwen (die kan stale of incompleet zijn).
+//
+// Hide rules:
+//   1. Gebruiker heeft minstens 1 store geconnect: hide volledig (past onboarding)
+//   2. localStorage.onboarding_dismissed = true: hide volledig
+//   3. Alle 4 stappen done: hide volledig
+//
+// Step detection (via props, niet backend):
+//   - account_created: altijd done
+//   - payment_completed: done als planSlug niet 'starter' is
+//   - shop_connected: done als hasStores
+//   - first_insight: alleen uit backend completedSteps
+//
+// Backend call is best-effort, faalt silent. Component werkt ook zonder.
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, ChevronRight, X, Zap } from 'lucide-react';
 import { api } from '@/lib/api';
 
-interface OnboardingStatus {
-  currentStep:     string;
-  completedSteps:  string[];
-  percentComplete: number;
-  isComplete:      boolean;
+interface OnboardingState {
+  completedSteps: string[];
+  status:         string;
+}
+
+interface Props {
+  hasStores: boolean;
+  planSlug:  string;
 }
 
 const STEPS = [
@@ -45,33 +65,29 @@ const STEPS = [
   },
 ];
 
-export function OnboardingChecklist() {
+export function OnboardingChecklist({ hasStores, planSlug }: Props) {
   const router = useRouter();
-  const [status,    setStatus]    = useState<OnboardingStatus | null>(null);
+  const [state,     setState]     = useState<OnboardingState | null>(null);
   const [dismissed, setDismissed] = useState(false);
-  const [loading,   setLoading]   = useState(true);
+  const [mounted,   setMounted]   = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const wasDismissed = localStorage.getItem('onboarding_dismissed') === 'true';
-    if (wasDismissed) { setDismissed(true); setLoading(false); return; }
+    if (wasDismissed) { setDismissed(true); return; }
 
-    // Fix V0 gap 5d: legacy /onboarding/status pad bestaat niet meer in backend,
-    // alleen /onboarding/state. Defensive parsing zodat de checklist niets
-    // verkeerds toont als de shape minimaal afwijkt.
     api.get('/onboarding/state')
       .then(res => {
         const data = res.data ?? {};
-        const completedSteps = Array.isArray(data.completedSteps) ? data.completedSteps : [];
-        const isComplete = data.status === 'completed' || data.isComplete === true;
-        setStatus({
-          currentStep:     typeof data.currentStep === 'string' ? data.currentStep : '',
-          completedSteps,
-          percentComplete: typeof data.percentComplete === 'number' ? data.percentComplete : 0,
-          isComplete,
+        setState({
+          completedSteps: Array.isArray(data.completedSteps) ? data.completedSteps : [],
+          status:         typeof data.status === 'string' ? data.status : '',
         });
       })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+      .catch(() => {
+        // Backend faalt: gebruik lege completedSteps zodat we toch op props kunnen leunen
+        setState({ completedSteps: [], status: '' });
+      });
   }, []);
 
   const dismiss = () => {
@@ -79,23 +95,43 @@ export function OnboardingChecklist() {
     setDismissed(true);
   };
 
-  if (loading || dismissed || !status) return null;
-  if (status.isComplete && status.percentComplete >= 100) return null;
+  // Voor mount: niets renderen (voorkomt hydration mismatch)
+  if (!mounted) return null;
 
-  const isStepDone = (stepId: string) => {
-    if (stepId === 'account_created') return true;
-    if (stepId === 'first_insight')   return status.completedSteps.includes('shop_connected');
-    return status.completedSteps.includes(stepId);
+  // Past onboarding: gebruiker heeft al stores connected
+  if (hasStores) return null;
+
+  // Gebruiker heeft expliciet weggedaan
+  if (dismissed) return null;
+
+  // Backend call niet klaar
+  if (!state) return null;
+
+  // Backend zegt expliciet completed
+  if (state.status === 'completed') return null;
+
+  const completedSteps = state.completedSteps;
+
+  const isStepDone = (stepId: string): boolean => {
+    if (stepId === 'account_created')   return true;
+    if (stepId === 'payment_completed') return planSlug !== 'starter' || completedSteps.includes('payment_completed');
+    if (stepId === 'shop_connected')    return hasStores || completedSteps.includes('shop_connected');
+    if (stepId === 'first_insight')     return completedSteps.includes('first_insight');
+    return completedSteps.includes(stepId);
   };
 
   const completedCount = STEPS.filter(s => isStepDone(s.id)).length;
-  const progress       = Math.round((completedCount / STEPS.length) * 100);
-  const nextStep       = STEPS.find(s => !isStepDone(s.id));
+
+  // Alle 4 done: hide
+  if (completedCount === STEPS.length) return null;
+
+  const progress = Math.round((completedCount / STEPS.length) * 100);
+  const nextStep = STEPS.find(s => !isStepDone(s.id));
 
   return (
-    <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 sm:p-5 mb-6">
+    <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 sm:p-5 mb-6 min-w-0 overflow-hidden">
 
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-8 h-8 rounded-lg bg-brand-600/20 flex items-center justify-center flex-shrink-0">
             <Zap className="w-4 h-4 text-brand-400" fill="currentColor" />
