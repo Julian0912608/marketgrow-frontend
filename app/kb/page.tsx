@@ -6,12 +6,18 @@
 // SEO-vriendelijk: full HTML met excerpts wordt geserveerd
 // aan Google crawlers.
 //
+// Conditionele UX:
+//   - Anonymous: hero + footer CTA "Start free trial"
+//   - Logged-in: "Back to dashboard" link bovenaan, geen footer CTA
+//
 // Category filtering via ?category= query param.
 // ============================================================
 
 import type { Metadata } from 'next';
 import { CategoryTabs } from './_components/CategoryTabs';
 import { ArticleGrid } from './_components/ArticleGrid';
+import { KbBackToDashboard } from './_components/KbBackToDashboard';
+import { KbAnonFooterCta } from './_components/KbAnonFooterCta';
 
 export const metadata: Metadata = {
   title:       'Knowledge Base | MarketGrow',
@@ -23,7 +29,6 @@ export const metadata: Metadata = {
   },
 };
 
-// SSR every request: KB is updated by admin, no need to cache.
 export const dynamic = 'force-dynamic';
 
 interface KbListItem {
@@ -80,6 +85,9 @@ export default async function KbListPage({
 
   return (
     <main className="min-h-screen bg-slate-50">
+      {/* Logged-in only: back to dashboard link */}
+      <KbBackToDashboard />
+
       {/* Hero */}
       <section className="bg-gradient-to-b from-white to-slate-50 border-b border-slate-200">
         <div className="max-w-5xl mx-auto px-6 py-16 sm:py-20">
@@ -101,11 +109,7 @@ export default async function KbListPage({
       {/* Category filter */}
       <section className="border-b border-slate-200 bg-white sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-6">
-          <CategoryTabs
-            activeCategory={category ?? null}
-            categories={data.categories}
-            categoryLabels={data.categoryLabels}
-          />
+          <CategoryTabs activeCategory={category ?? null} categories={data.categories} categoryLabels={data.categoryLabels} />
         </div>
       </section>
 
@@ -126,23 +130,8 @@ export default async function KbListPage({
         </div>
       </section>
 
-      {/* Footer CTA */}
-      {!data.isAuthenticated && (
-        <section className="bg-slate-900 text-white">
-          <div className="max-w-3xl mx-auto px-6 py-16 text-center">
-            <h2 className="text-2xl sm:text-3xl font-bold mb-3">
-              Want the full guides?
-            </h2>
-            <p className="text-slate-300 mb-6">
-              Sign up free to read complete articles, plus get AI-powered insights from
-              your own store data.
-            </p>
-            <a href="/register" className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-3 rounded-xl transition-colors">
-              Start free trial
-            </a>
-          </div>
-        </section>
-      )}
+      {/* Anonymous-only: footer CTA */}
+      <KbAnonFooterCta />
     </main>
   );
 }
