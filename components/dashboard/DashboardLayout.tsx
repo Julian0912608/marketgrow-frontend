@@ -9,6 +9,9 @@
 // PR 3a: Meta Studio nav item toegevoegd (gated op 'ad-analytics' = Growth+)
 // V0 Gap 4: Knowledge Base nav item toegevoegd (no gating, beschikbaar voor alle plans).
 // V0 Gap 5a: aria-label op mobile menu button en notifications button voor a11y.
+// V0 Gap 5a polish (16 mei 2026): safe-area-inset-top op header en sidebar logo
+// zodat de hamburger menu niet meer onder de iOS Dynamic Island valt in
+// standalone PWA mode (viewport-fit=cover + black-translucent status bar).
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -97,8 +100,11 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const Sidebar = () => (
     <aside className="w-60 bg-slate-950 flex flex-col h-full border-r border-slate-800">
 
-      {/* Logo */}
-      <div className="px-5 py-5 border-b border-slate-800">
+      {/* Logo. paddingTop respecteert iOS notch in PWA standalone mode. */}
+      <div
+        className="px-5 pb-5 border-b border-slate-800"
+        style={{ paddingTop: 'max(env(safe-area-inset-top), 1.25rem)' }}
+      >
         <Link href="/dashboard" className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center shadow-lg shadow-brand-600/30">
             <Zap className="w-4 h-4 text-white" fill="white" />
@@ -147,14 +153,17 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             <p className="text-xs font-semibold text-brand-400 mb-1">Upgrade to Growth</p>
             <p className="text-xs text-slate-500 mb-2">Unlock AI insights, ad analytics and more.</p>
             <Link href="/settings?tab=billing" className="block text-center text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white py-1.5 rounded-lg transition-colors">
-              View plans →
+              View plans
             </Link>
           </div>
         )}
       </nav>
 
-      {/* User */}
-      <div className="px-3 py-4 border-t border-slate-800">
+      {/* User. paddingBottom respecteert iOS home indicator in PWA mode. */}
+      <div
+        className="px-3 pt-4 border-t border-slate-800"
+        style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 1rem)' }}
+      >
         <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1">
           <div className="w-7 h-7 rounded-full bg-brand-600/20 border border-brand-600/30 flex items-center justify-center text-xs font-bold text-brand-400">
             {user?.firstName?.[0]?.toUpperCase()}{user?.lastName?.[0]?.toUpperCase()}
@@ -193,8 +202,11 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
 
-        {/* Top bar */}
-        <header className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950">
+        {/* Top bar. paddingTop respecteert iOS notch in PWA standalone mode. */}
+        <header
+          className="flex items-center justify-between px-6 pb-4 border-b border-slate-800 bg-slate-950"
+          style={{ paddingTop: 'max(env(safe-area-inset-top), 1rem)' }}
+        >
           <button aria-label="Open menu" className="lg:hidden text-slate-400 hover:text-white" onClick={() => setSidebarOpen(true)}>
             <Menu className="w-5 h-5" />
           </button>
@@ -211,7 +223,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         </main>
       </div>
 
-      {/* Upgrade modal — luistert globaal naar upgrade-required events */}
+      {/* Upgrade modal: luistert globaal naar upgrade-required events */}
       <UpgradeModal />
     </div>
   );
